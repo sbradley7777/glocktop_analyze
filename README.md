@@ -27,8 +27,5 @@ $ ~/github/glocktop_analyze/glocktop_analyze.py -p /tmp/glocktop.node1
 ```
 
 ### References
-- Source Code gfs2-utils.git - `glocktop`
-  https://git.fedorahosted.org/cgit/gfs2-utils.git/tree/gfs2/glocktop
-- How can I view glock contention on a GFS2 filesystem in real-time in a
-  RHEL 5, 6, or 7 Resilient Storage cluster?
-  https://access.redhat.com/articles/666533
+- [Source Code gfs2-utils.git - `glocktop`](https://git.fedorahosted.org/cgit/gfs2-utils.git/tree/gfs2/glocktop)
+- [How can I view glock contention on a GFS2 filesystem in real-time in a RHEL 5, 6, or 7 Resilient Storage cluster?](https://access.redhat.com/articles/666533)
