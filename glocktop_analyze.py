@@ -4,7 +4,7 @@
 @author    : Shane Bradley
 @contact   : sbradley@redhat.com
 @version   : 0.1
-@copyright : GPLv2
+@copyright : GPLv3
 
 
 NEXT Features:
