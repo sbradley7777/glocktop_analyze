@@ -460,9 +460,12 @@ if __name__ == "__main__":
             for stat in gstats:
                 x.append(stat.get_date_time())
                 y.append(int(stat.get_count()))
+            # The x_label_rotation is how it is turned downward.
             graph=pygal.DateY(x_label_rotation=20)
+
             graph.add("%s unlocked inodes" %(filesystem_name),list(zip(tuple(x),tuple(y)))+[None,None])
             graph.render_to_file("/redhat/html/misc/pygal/%s.svg" %(filesystem_name))
+            graph.render_to_png("/redhat/html/misc/pygal/%s.png" %(filesystem_name))
 
     except KeyboardInterrupt:
         print ""
