@@ -108,6 +108,6 @@ def process_gfs2_snapshot(gfs2_snapshot, snapshot_lines):
                                          stat_map.get("flock"), stat_map.get("quota"),
                                          stat_map.get("journal"), stat_map.get("total"))
                 glocks_stats.add_glock_stats(glock_stats)
-        if (glocks_stats.get_glocks_stats()):
+        if (glocks_stats.get_glock_stats()):
             gfs2_snapshot.add_glocks_stats(glocks_stats)
 

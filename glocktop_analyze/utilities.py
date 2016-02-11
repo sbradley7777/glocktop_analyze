@@ -97,6 +97,11 @@ class ColorizeConsoleText(object):
         return cls.__format__()
 
     @classmethod
+    def light_grey(clazz, text):
+        cls = clazz(text, fg_light_grey=True)
+        return cls.__format__()
+
+    @classmethod
     def custom(clazz, text, **custom_styles):
         cls = clazz(text, **custom_styles)
         return cls.__format__()
@@ -104,77 +109,53 @@ class ColorizeConsoleText(object):
 # ##############################################################################
 # Functions
 # ##############################################################################
-def tableize(table, header):
-    if (not len(table) > 0):
-        return ""
+def tableize(rows, header, colorize=True):
+    """
+    Prints out a table using the data in `rows`, which is assumed to be a
+    sequence of sequences with the 0th element being the header.
+    https://gist.github.com/lonetwin/4721748
+    """
+    formatted_table = ""
 
-    colorize_header = []
-    for item in header:
-        colorize_header.append(ColorizeConsoleText.red(item))
-    table.insert(0, header)
-
-    def format_num(num):
+    rows.insert(0, header)
+    def __format_item(item):
+        import locale
+        locale.setlocale(locale.LC_NUMERIC, "")
         try:
-            inum = int(num)
-            return locale.format("%.*f", (0, inum), True)
-        except (ValueError, TypeError):
-            return str(num)
+            return str(item)
+        except UnicodeEncodeError:
+            return item.encode("utf-8")
 
-    def get_max_width(table, index):
-        return max([len(format_num(row[index])) for row in table])
-    col_paddings = []
-
-    for i in range(len(table[0])):
-        col_paddings.append(get_max_width(table, i))
-
-    ftable = ""
-    for row in table:
-        # left col
-        ftable += str(row[0].ljust(col_paddings[0] + 1))
-        # rest of the cols
-        for i in range(1, len(row)):
-            col = format_num(row[i]).rjust(col_paddings[i] + 2)
-            ftable += str(col)
-        ftable += "\n"
-
-    return ftable
-
-def write_to_file(path_to_filename, data, append_to_file=True, create_file=False):
-    [parent_dir, filename] = os.path.split(path_to_filename)
-    if (os.path.isfile(path_to_filename) or (os.path.isdir(parent_dir) and create_file)):
-        try:
-            file_mode = "w"
-            if (append_to_file):
-                file_mode = "a"
-            fout = open(path_to_filename, file_mode)
-            fout.write(data + "\n")
-            fout.close()
-            return True
-        except UnicodeEncodeError, e:
-            message = "There was a unicode encode error writing to the file: %s." %(path_to_filename)
-            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
-            return False
-        except IOError:
-            message = "There was an error writing to the file: %s." %(path_to_filename)
-            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
-            return False
-    return False
-
-def mkdirs(path_to_dir):
-    if (os.path.isdir(path_to_dir)):
-        return True
-    elif ((not os.access(path_to_dir, os.F_OK)) and (len(path_to_dir) > 0)):
-        try:
-            os.makedirs(path_to_dir)
-        except (OSError, os.error):
-            message = "Could not create the directory: %s." %(path_to_dir)
-            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
-            return False
-        except (IOError, os.error):
-            message = "Could not create the directory with the path: %s." %(path_to_dir)
-            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
-            return False
-    return os.path.isdir(path_to_dir)
+    # Convert all values in rows to strings.
+    if (len(rows) > 0):
+        converted_rows_to_str = []
+        for row in rows:
+            current_row = []
+            for item in row:
+                current_row.append(__format_item(item))
+            if (len(current_row) > 0):
+                converted_rows_to_str.append(current_row)
+        # Figure out each column widths which is max column size for all rows.
+        widths = [ len(max(columns, key=len)) for columns in zip(*converted_rows_to_str) ]
+        # Add seperator
+        formatted_table += '-+-'.join( '-' * width for width in widths) + "\n"
+        # Add the header
+        header, data = converted_rows_to_str[0], converted_rows_to_str[1:]
+        formatted_table += ' | '.join(ColorizeConsoleText.red(format(title, "%ds" % width))
+                                      for width, title in zip(widths, header) ) + "\n"
+        # Add seperator from first row and header.
+        formatted_table += '-+-'.join( '-' * width for width in widths) + "\n"
+        count = 0
+        for row in data:
+            row_string = " | ".join(format(cdata, "%ds" % width) for width, cdata in zip(widths, row))
+            if (not row_string.startswith("-")):
+                count = count + 1
+            # Skip colorizing filler lines with no data "-|-|-".
+            if (((count % 2) == 0) and (colorize == True) and
+                (not row_string.replace(" ", "").startswith("-|-|-"))):
+                row_string = ColorizeConsoleText.light_grey(row_string)
+            formatted_table += row_string + "\n"
+    return formatted_table
 
 def get_data_from_file(path_to_filename) :
     if (len(path_to_filename) > 0) :
@@ -190,4 +171,3 @@ def get_data_from_file(path_to_filename) :
             message = "An error occured reading the file: %s." %(path_to_filename)
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
     return []
-

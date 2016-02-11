@@ -29,7 +29,7 @@ class GlocksStats():
     def add_glock_stats(self, glock_stats):
         self.__glocks_stats.append(glock_stats)
 
-    def get_glocks_stats(self):
+    def get_glock_stats(self):
         return self.__glocks_stats
 
 class GlockStats():
