@@ -405,16 +405,64 @@ if __name__ == "__main__":
                     print "Glock stats at %s for filesystem: %s" %(snapshot.get_date_time(), ColorizeConsoleText.red(snapshot.get_filesystem_name()))
                     table = []
                     for glock_stats in glocks_stats.get_glock_stats():
-                        table.append([glock_stats.get_glock_category(), glock_stats.get_nondisk(),
+                        table.append([glock_stats.get_state(), glock_stats.get_nondisk(),
                                       glock_stats.get_inode(), glock_stats.get_rgrp(),
                                       glock_stats.get_iopen(), glock_stats.get_flock(),
                                       glock_stats.get_quota(), glock_stats.get_journal(),
                                       glock_stats.get_total()])
-                    header = ["Glock Category","nondisk", "inode", "rgrp", "iopen", "flock", "quota", "journal", "total"]
+                    header = ["Glock State","nondisk", "inode", "rgrp", "iopen", "flock", "quota", "journal", "total"]
                     ftable = tableize(table, header)
                     if (len(ftable) > 0):
                         print ftable
                     print
+
+        # Debug charts
+        class GlockStat():
+            def __init__(self, filesystem_name, date_time, glock_state, glock_type, count):
+                self.__filesystem_name = filesystem_name
+                self.__date_time = date_time
+                self.__glock_state = glock_state
+                self.__glock_type = glock_type
+                self.__count = count
+
+            def get_filesystem_name(self):
+                return self.__filesystem_name
+
+            def get_date_time(self):
+                return self.__date_time
+
+            def get_state(self):
+                return self.__glock_state
+
+            def get_type(self):
+                return self.__glock_type
+
+            def get_count(self):
+                return self.__count
+
+        unlocked_inodes = {}
+        for snapshot in snapshots:
+                glocks_stats = snapshot.get_glocks_stats()
+                if (not glocks_stats == None):
+                    for glock_stats in glocks_stats.get_glock_stats():
+                        if ("Unlocked" == glock_stats.get_state()):
+                            if (not unlocked_inodes.has_key(snapshot.get_filesystem_name())):
+                                unlocked_inodes[snapshot.get_filesystem_name()] = []
+                            glock_stat = GlockStat(snapshot.get_filesystem_name(), snapshot.get_date_time(),
+                                                   glock.get_state(), "inode", glock_stats.get_inode())
+                            unlocked_inodes[snapshot.get_filesystem_name()].append(glock_stat)
+
+        import pygal
+        for filesystem_name in unlocked_inodes.keys():
+            x = []
+            y = []
+            gstats = unlocked_inodes.get(filesystem_name)
+            for stat in gstats:
+                x.append(stat.get_date_time())
+                y.append(int(stat.get_count()))
+            graph=pygal.DateY(x_label_rotation=20)
+            graph.add("%s unlocked inodes" %(filesystem_name),list(zip(tuple(x),tuple(y)))+[None,None])
+            graph.render_to_file("/redhat/html/misc/pygal/%s.svg" %(filesystem_name))
 
     except KeyboardInterrupt:
         print ""

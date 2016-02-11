@@ -19,7 +19,6 @@ class GlocksStats():
         # S P Waiting:       0        1       0       0       0     0    0        1
         # S  DLM wait:       0        self.__glock_stats_category_order = ""
         self.__glocks_stats = []
-        self.__glocks_stats_category_order = ["Unlocked","Locked", "Held EX", "Held SH", "Held DF", "G Waiting", "P Waiting", "DLM wait"]
     def __str__(self):
         rstring = ""
         for glock_stats in self.get_glocks_stats():
@@ -33,9 +32,9 @@ class GlocksStats():
         return self.__glocks_stats
 
 class GlockStats():
-    def __init__(self, glock_category, nondisk, inode, rgrp, iopen,
+    def __init__(self, glock_state, nondisk, inode, rgrp, iopen,
                  flock, quota, journal, total):
-        self.__glock_category = glock_category
+        self.__glock_state = glock_state
         self.__nondisk = nondisk
         self.__inode = inode
         self.__rgrp = rgrp
@@ -46,13 +45,13 @@ class GlockStats():
         self.__total = total
 
     def __str__(self):
-        rstring =  "%s %s %s " %(self.get_glock_category(), self.get_nondisk(), self.get_inode())
+        rstring =  "%s %s %s " %(self.get_glock_state(), self.get_nondisk(), self.get_inode())
         rstring += "%s %s %s " %(self.get_rgrp(), self.get_iopen(), self.get_flock())
         rstring += "%s %s %s " %(self.get_quota(), self.get_journal(), self.get_total())
         return rstring
 
-    def get_glock_category(self):
-        return self.__glock_category
+    def get_state(self):
+        return self.__glock_state
 
     def get_nondisk(self):
         return self.__nondisk

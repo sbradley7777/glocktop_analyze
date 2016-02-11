@@ -102,7 +102,7 @@ def process_gfs2_snapshot(gfs2_snapshot, snapshot_lines):
         for line in glocks_stats_lines:
             stat_map = parse_glocks_stats(line)
             if (stat_map):
-                glock_stats = GlockStats(stat_map.get("glock_category"),
+                glock_stats = GlockStats(stat_map.get("glock_state"),
                                          stat_map.get("nondisk"), stat_map.get("inode"),
                                          stat_map.get("rgrp"), stat_map.get("iopen"),
                                          stat_map.get("flock"), stat_map.get("quota"),
