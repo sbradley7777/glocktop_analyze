@@ -116,6 +116,8 @@ def tableize(rows, header, colorize=True):
     https://gist.github.com/lonetwin/4721748
     """
     formatted_table = ""
+    if (not rows):
+        return formatted_table
 
     rows.insert(0, header)
     def __format_item(item):
