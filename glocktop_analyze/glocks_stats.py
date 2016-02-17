@@ -7,119 +7,38 @@
 @copyright :  GPLv3
 """
 
+from glocktop_analyze.utilities import ColorizeConsoleText, tableize
+
+import itertools
+from datetime import datetime
+
+GLOCK_TYPES = ["nondisk", "inode", "rgrp", "iopen", "flock", "quota", "journal"]
+GLOCK_STATES = ["Unlocked", "Locked", "Held EX", "Held SH", "Held DF", "G Waiting", "P Waiting", "DLM wait"]
+
 class GlocksStats():
-    def __init__(self):
-        # glocks    nondisk  inode    rgrp   iopen    flock  quota jrnl
-        # S  Unlocked:       1        6       4       0       0     0    0       11
-        # S    Locked:       2      370       6     124       0     0    1      504
-        # S   Held EX:       0        2       0       0       0     0    1        3
-        # S   Held SH:       1        1       0     123       0     0    0      125
-        # S   Held DF:       0        0       0       0       0     0    0        0
-        # S G Waiting:       0        1       0       0       0     0    0        1
-        # S P Waiting:       0        1       0       0       0     0    0        1
-        # S  DLM wait:       0
-        self.__glock_types = ["nondisk", "inode", "rgrp", "iopen", "flock", "quota", "jrnl"]
-        self.__glock_states = ["Unlocked", "Locked", "Held EX", "Held SH", "Held DF", "G Waiting", "P Waiting", "DLM wait"]
-        self.__glocks_stats_map = dict.fromkeys(self.__glock_states, None)
+    def __init__(self, filesystem_name, date_time):
+        self.__filesystem_name = filesystem_name
+        self.__date_time = date_time
+        self.__glocks_stats_map = {}
 
 
     def __str__(self):
         rstring = ""
-        for glock_state in self.__glocks_stats_map.keys():
-            glock_stats = self.get_stats(glock_state)
-            if (not glock_stats == None):
-                rstring += "%s\n" %(str(glock_stats))
+        table = []
+        for state in GLOCK_STATES:
+            cstats = []
+            for gtype in GLOCK_TYPES:
+                cstats.append(self.__glocks_stats_map.get(self.__generate_hash(gtype, state)).get_stat())
+            cstats.insert(0, state)
+            table.append(cstats)
+        ftable = tableize(table, ["Glock States"] + GLOCK_STATES)
+        if (ftable):
+            rstring += "Glock stats at %s for filesystem: %s\n%s\n" %(ColorizeConsoleText.orange(self.get_date_time().strftime("%Y-%m-%d %H:%M:%S")),
+                                                                      ColorizeConsoleText.orange(self.get_filesystem_name()), ftable)
         return rstring.rstrip()
 
-    def add_stats(self, glock_stats):
-        self.__glocks_stats_map[glock_stats.get_state()] = glock_stats
-
-    def get_stats(self, state):
-        if (not self.__glocks_stats_map.has_key(state)):
-            return None
-        return self.__glocks_stats_map.get(state)
-
-    def get_stats_by_type(self, gtype):
-        stats = {}
-        for glock_state in self.__glocks_stats_map.keys():
-            glock_stats = self.__glocks_stats_map.get(glock_state)
-            for glock_stat in glock_stats.get_all():
-                if (glock_stat.get_type() == gtype):
-                    stats[glock_state] = glock_stat
-        return stats
-
-    def get_states(self):
-        return self.__glock_states
-
-    def get_types(self):
-        return self.__glock_types
-
-    def has_stats(self):
-        for glock_state in self.get_states():
-            glock_stats = self.get_stats(glock_state)
-            if (not glock_stats == None):
-                return True
-        return False
-
-
-
-class GlockStats():
-    def __init__(self, state, nondisk, inode, rgrp, iopen,
-                 flock, quota, journal):
-        self.__state = state
-        self.__nondisk = nondisk
-        self.__inode = inode
-        self.__rgrp = rgrp
-        self.__iopen = iopen
-        self.__flock = flock
-        self.__quota = quota
-        self.__journal = journal
-
-    def __str__(self):
-        return "%s %d %d %d %d %d %d %d" %(self.get_state(),
-                                           self.get_nondisk().get_count(),
-                                           self.get_inode().get_count(),
-                                           self.get_rgrp().get_count(),
-                                           self.get_iopen().get_count(),
-                                           self.get_flock().get_count(),
-                                           self.get_quota().get_count(),
-                                           self.get_journal().get_count())
-    def get_state(self):
-        return self.__state
-
-    def get_nondisk(self):
-        return self.__nondisk
-
-    def get_inode(self):
-        return self.__inode
-
-    def get_rgrp(self):
-        return self.__rgrp
-
-    def get_iopen(self):
-        return self.__iopen
-
-    def get_flock(self):
-        return self.__flock
-
-    def get_quota(self):
-        return self.__quota
-
-    def get_journal(self):
-        return self.__journal
-
-    def get_all(self):
-        return [self.get_nondisk(), self.get_inode(), self.get_rgrp(),
-                self.get_iopen(), self.get_flock(), self.get_quota(),
-                self.get_journal()]
-
-class GlockStat():
-    def __init__(self, filesystem_name, date_time, state, gtype, count):
-        self.__filesystem_name = filesystem_name
-        self.__date_time = date_time
-        self.__state = state
-        self.__gtype = gtype
-        self.__count = count
+    def __generate_hash(self, gtype, state):
+        return "%s-%s" %(gtype, state)
 
     def get_filesystem_name(self):
         return self.__filesystem_name
@@ -127,11 +46,57 @@ class GlockStat():
     def get_date_time(self):
         return self.__date_time
 
-    def get_state(self):
-        return self.__state
+    def has_stats(self):
+        return (len(self.__glocks_stats_map.keys()) > 0)
+
+    def add_stat(self, gtype, state, count):
+        key = self.__generate_hash(gtype, state)
+        if (not len(self.__glocks_stats_map.keys()) > 0):
+            # Populate the map with all the keys and create GlockStat objects for
+            # them that are initialized.
+            for gtype,state in itertools.product(GLOCK_TYPES, GLOCK_STATES):
+                self.__glocks_stats_map[self.__generate_hash(gtype, state)] = GlockStat(self.__filesystem_name, gtype, state)
+        if (self.__glocks_stats_map.has_key(key)):
+            self.__glocks_stats_map.get(key).set_stat(count)
+
+    def get_stat(self, gtype, state):
+        key = self.__generate_hash(gtype, state)
+        if (self.__glocks_stats_map.has_key(key)):
+            return self.__glocks_stats_map.get(key).get_stat()
+        # If no stat found then return -1 which means invalid since all stat
+        # should be >= 0.
+        return -1
+
+    def get_stats_by_type(self, gtype):
+        stats = {}
+        for state in GLOCK_STATES:
+            stats[state] = self.get_stat(gtype, state)
+        return stats
+
+    def get_stats_by_state(self, state):
+        stats = {}
+        for gtype in GLOCK_TYPES:
+            stats[gtype] = self.get_stat(gtype, state)
+        return stats
+
+class GlockStat():
+    def __init__(self, filesystem_name, gtype, state):
+        self.__filesystem_name = filesystem_name
+        self.__gtype = gtype
+        self.__state = state
+        self.__stat = -1
+
+    def get_filesystem_name(self):
+        return self.__filesystem_name
 
     def get_type(self):
         return self.__gtype
 
-    def get_count(self):
-        return self.__count
+    def get_state(self):
+        return self.__state
+
+    def get_stat(self):
+        return self.__stat
+
+    def set_stat(self, stat):
+        self.__stat = stat

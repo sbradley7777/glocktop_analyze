@@ -8,7 +8,6 @@
 @copyright :  GPLv3
 """
 import re
-from glocktop_analyze.glocks_stats import GlocksStats, GlockStats
 
 def parse_glocks_stats(line):
     try:
@@ -18,7 +17,7 @@ def parse_glocks_stats(line):
     if ((stat_line.find("--") > 0) or (stat_line.find("Total") > 0)):
         return {}
     stats_map = {"glock_state":"", "nondisk":0, "inode":0, "rgrp":0, "iopen":0, "flock":0, "quota":0, "journal":0, "total":0}
-    regex = "(?P<glock_state>Unlocked|Locked|Held EX|Held SH|Held DF|G Waiting|P Waiting):.*(?P<nondisk>\d+).*(?P<inode>\d+).*(?P<rgrp>\d+).*(?P<iopen>\d+).*(?P<flock>\d+).*(?P<quota>\d+).*(?P<journal>\d+).*(?P<total>\d+).*"
+    regex = "(?P<glock_state>Unlocked|Locked|Held EX|Held SH|Held DF|G Waiting|P Waiting):\s*(?P<nondisk>\d+)\s*(?P<inode>\d+)\s*(?P<rgrp>\d+)\s*(?P<iopen>\d+)\s*(?P<flock>\d+)\s*(?P<quota>\d+)\s*(?P<journal>\d+)\s*(?P<total>\d+).*"
     rem = re.compile(regex)
     mo = rem.match(stat_line)
     if mo:

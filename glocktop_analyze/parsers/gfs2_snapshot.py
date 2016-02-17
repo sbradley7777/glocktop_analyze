@@ -14,7 +14,8 @@ from datetime import datetime
 
 from glocktop_analyze.gfs2_snapshot import GFS2Snapshot, DLMActivity
 from glocktop_analyze.glock import Glock, GlockHolder, GlockObject
-from glocktop_analyze.glocks_stats import GlocksStats, GlockStats, GlockStat
+from glocktop_analyze.glocks_stats import GlocksStats, GlockStat
+import glocktop_analyze.glocks_stats
 
 from glocktop_analyze.parsers.glock import parse_glock,parse_glock_holder
 from glocktop_analyze.parsers.glocks_stats import parse_glocks_stats
@@ -98,21 +99,14 @@ def process_gfs2_snapshot(gfs2_snapshot, snapshot_lines):
                 # got ten processes waiting, or ten glocks that have ten
                 # processes waiting.
                 glocks_stats_lines.append(sline)
-        glocks_stats = GlocksStats()
-        filesystem_name = gfs2_snapshot.get_filesystem_name()
-        date_time = gfs2_snapshot.get_date_time()
-        for line in glocks_stats_lines:
-            stat_map = parse_glocks_stats(line)
-            if (stat_map):
-                glock_state = stat_map.get("glock_state")
-                glock_stats = GlockStats(glock_state,
-                                         GlockStat(filesystem_name, date_time, glock_state, "nondisk", int(stat_map.get("nondisk"))),
-                                         GlockStat(filesystem_name, date_time, glock_state, "inode", int(stat_map.get("inode"))),
-                                         GlockStat(filesystem_name, date_time, glock_state, "rgrp", int(stat_map.get("rgrp"))),
-                                         GlockStat(filesystem_name, date_time, glock_state, "iopen", int(stat_map.get("iopen"))),
-                                         GlockStat(filesystem_name, date_time, glock_state, "flock", int(stat_map.get("flock"))),
-                                         GlockStat(filesystem_name, date_time, glock_state, "quota", int(stat_map.get("quota"))),
-                                         GlockStat(filesystem_name, date_time, glock_state, "journal", int(stat_map.get("journal"))))
-                glocks_stats.add_stats(glock_stats)
-        if (glocks_stats.has_stats()):
+        if (glocks_stats_lines):
+            filesystem_name = gfs2_snapshot.get_filesystem_name()
+            date_time = gfs2_snapshot.get_date_time()
+            glocks_stats = GlocksStats(filesystem_name, date_time)
+            for line in glocks_stats_lines:
+                stat_map = parse_glocks_stats(line)
+                if (stat_map):
+                    glock_state = stat_map.get("glock_state")
+                    for glock_type in glocktop_analyze.glocks_stats.GLOCK_TYPES:
+                        glocks_stats.add_stat(glock_type, glock_state, int(stat_map.get(glock_type)))
             gfs2_snapshot.add_glocks_stats(glocks_stats)

@@ -7,3 +7,4 @@
 @copyright :  GPLv3
 """
 MAIN_LOGGER_NAME = "glocktop_analyze"
+MAIN_LOGGER_FORMAT = "%(levelname)s %(message)s"
