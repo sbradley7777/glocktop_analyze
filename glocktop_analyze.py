@@ -494,8 +494,8 @@ if __name__ == "__main__":
                                                           glocks_with_waiters.get(filesystem_name)[1],
                                                           "%s - Glock Waiter Count" %(filesystem_name),
                                                           "glocks", "waiter count", format_png=False)
-                generate_graph_index_page(cmdline_opts.path_to_output_dir, path_to_graphs, "Glock Waiter Count")
-
+                    generate_graph_index_page(cmdline_opts.path_to_output_dir, path_to_graphs, "%s - Glock Waiter Count" %(filesystem_name))
+                    
         except AttributeError:
             # Graphing must be disabled since option does not exists.
             pass
