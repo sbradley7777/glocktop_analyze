@@ -12,6 +12,7 @@ import logging
 import logging.handlers
 import os
 import os.path
+import re
 import locale
 locale.setlocale(locale.LC_NUMERIC, "")
 
@@ -269,8 +270,13 @@ def tableize(rows, header, colorize=True):
         formatted_table += '-+-'.join( '-' * width for width in widths) + "\n"
         # Add the header
         header, data = converted_rows_to_str[0], converted_rows_to_str[1:]
-        formatted_table += ' | '.join(ColorizeConsoleText.red(format(title, "%ds" % width))
-                                      for width, title in zip(widths, header) ) + "\n"
+        if (colorize):
+            formatted_table += ' | '.join(ColorizeConsoleText.red(format(title, "%ds" % width))
+                                          for width, title in zip(widths, header) ) + "\n"
+        else:
+            formatted_table += ' | '.join(format(title, "%ds" % width)
+                                        for width, title in zip(widths, header) ) + "\n"
+
         # Add seperator from first row and header.
         formatted_table += '-+-'.join( '-' * width for width in widths) + "\n"
         count = 0
@@ -324,7 +330,8 @@ def write_to_file(path_to_filename, data, append_to_file=True, create_file=False
             if (append_to_file):
                 file_mode = "a"
             fout = open(path_to_filename, file_mode)
-            fout.write(data + "\n")
+            for line in data:
+                fout.write(line)
             fout.close()
             return True
         except UnicodeEncodeError, e:
