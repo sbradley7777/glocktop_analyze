@@ -304,7 +304,9 @@ if __name__ == "__main__":
         # Print summary of data analyzed
         glocktop_summary_console = ""
         glocktop_summary_file = ""
+        hostname = ""
         for snapshot in snapshots:
+            hostname = snapshot.get_hostname()
             current_summary = ""
             glocks = []
             if (cmdline_opts.glock_inode):
@@ -326,8 +328,11 @@ if __name__ == "__main__":
                 glocktop_summary_file += "%s\n%s\n" %(str(snapshot), current_summary)
 
         print glocktop_summary_console
-        if (mkdirs(cmdline_opts.path_to_output_dir)):
-            path_to_glocktop_summary_file = os.path.join(cmdline_opts.path_to_output_dir, "glocktop_summary.txt")
+        # The path to directory where all files written for this host will be
+        # written.
+        path_to_output_dir = os.path.join(cmdline_opts.path_to_output_dir, hostname)
+        if (mkdirs(path_to_output_dir)):
+            path_to_glocktop_summary_file = os.path.join(path_to_output_dir, "glocktop_summary.txt")
             if (not write_to_file(path_to_glocktop_summary_file, glocktop_summary_file,
                                   append_to_file=False, create_file=True)):
                 message = "An error occurred writing the glocktop summary file: %s" %(path_to_glocktop_summary_file)
@@ -375,7 +380,7 @@ if __name__ == "__main__":
             print "                             Stats for glocktop                                  "
             print "---------------------------------------------------------------------------------"
             # Print filesystem stats
-            path_to_glocktop_stats_file = os.path.join(cmdline_opts.path_to_output_dir, "glocktop_stats.txt")
+            path_to_glocktop_stats_file = os.path.join(path_to_output_dir, "glocktop_stats.txt")
             table = []
             for key in filesystem_count.keys():
                 #date_time = filesystem_count.get(key).get_date_time()
@@ -446,7 +451,7 @@ if __name__ == "__main__":
                     summary_glock_stats += "\n%s\n" %(str(glocks_stats))
             if (summary_glock_stats):
                 print summary_glock_stats
-                path_to_glocktop_glocks_stats_file = os.path.join(cmdline_opts.path_to_output_dir, "glocktop_glocks_stats.txt")
+                path_to_glocktop_glocks_stats_file = os.path.join(path_to_output_dir, "glocktop_glocks_stats.txt")
                 if (not write_to_file(path_to_glocktop_glocks_stats_file, summary_glock_stats,
                                       append_to_file=True, create_file=True)):
                     message = "An error occurred writing the glocktop stats file: %s" %(path_to_glocktop_stats_file)
@@ -466,11 +471,13 @@ if __name__ == "__main__":
                         else:
                             snapshots_by_filesystem[snapshot.get_filesystem_name()] = [snapshot]
                 for filesystem_name in snapshots_by_filesystem:
+                    path_to_output_dir = os.path.join(path_to_output_dir, filesystem_name)
                     generate_graphs_by_glock_type(snapshots_by_filesystem.get(filesystem_name),
-                                                  cmdline_opts.path_to_output_dir)
+                                                  path_to_output_dir)
                 for filesystem_name in snapshots_by_filesystem:
+                    path_to_output_dir = os.path.join(path_to_output_dir, filesystem_name)
                     generate_graphs_by_glock_state(snapshots_by_filesystem.get(filesystem_name),
-                                                   cmdline_opts.path_to_output_dir)
+                                                   path_to_output_dir)
 
                 # Glocks with waiter count higher than 2
                 message = "The graphs for the glocks stats with waiter count higher than 1."
@@ -489,13 +496,14 @@ if __name__ == "__main__":
                         glocks_with_waiters.get(filesystem_name)[1].append(pair[1])
                 path_to_graphs = []
                 for filesystem_name in glocks_with_waiters.keys():
-                    path_to_graphs += generate_bar_graphs(cmdline_opts.path_to_output_dir,
+                    path_to_output_dir = os.path.join(path_to_output_dir, filesystem_name)
+                    path_to_graphs = generate_bar_graphs(path_to_output_dir,
                                                           glocks_with_waiters.get(filesystem_name)[0],
                                                           glocks_with_waiters.get(filesystem_name)[1],
                                                           "%s - Glock Waiter Count" %(filesystem_name),
                                                           "glocks", "waiter count", format_png=False)
-                    generate_graph_index_page(cmdline_opts.path_to_output_dir, path_to_graphs, "%s - Glock Waiter Count" %(filesystem_name))
-                    
+                    generate_graph_index_page(path_to_output_dir, path_to_graphs, "%s - Glock Waiter Count" %(filesystem_name))
+
         except AttributeError:
             # Graphing must be disabled since option does not exists.
             pass

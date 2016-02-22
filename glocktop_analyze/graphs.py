@@ -143,7 +143,7 @@ def generate_bar_graphs(path_to_output_dir, x_axis, y_axis, title, x_axis_title,
         path_to_image_file = ""
         if (format_png):
             try:
-                path_to_image_file = os.path.join(path_to_image_dir, "%s_stat.png" %(title.replace(" ", "_").lower()))
+                path_to_image_file = os.path.join(path_to_image_dir, "%s_stat.png" %(title.replace(" - ", "-").replace(" ", "_").lower()))
                 message = "Writing graph to %s" %(path_to_image_file)
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
                 bar_chart.render_to_png(path_to_image_file)
@@ -154,7 +154,7 @@ def generate_bar_graphs(path_to_output_dir, x_axis, y_axis, title, x_axis_title,
                 message = "The format svg will be used instead."
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).info(message)
         if (not png_format_rendered):
-            path_to_image_file = os.path.join(path_to_image_dir, "%s_stat.svg" %(title.replace(" ", "_").lower()))
+            path_to_image_file = os.path.join(path_to_image_dir, "%s_stat.svg" %(title.replace(" - ", "-").replace(" ", "_").lower()))
             message = "Writing graph to %s" %(path_to_image_file)
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
             bar_chart.render_to_file(path_to_image_file)
@@ -179,7 +179,7 @@ def generate_graph_index_page(path_to_output_dir, path_to_graphs, title):
             figure_code += figure_code_pre_png
         figure_code += "graphs/%s%s" %(os.path.split(path_to_image_file)[1], figure_code_post)
     html_data = "%s%s%s" %(html_header, figure_code, html_footer)
-    path_to_html_file = os.path.join(path_to_output_dir, "%s.html" %(title.replace(" ", "_").lower()))
+    path_to_html_file = os.path.join(path_to_output_dir, "%s.html" %(title.replace(" - ", "-").replace(" ", "_").lower()))
     if (write_to_file(path_to_html_file, html_data, append_to_file=False, create_file=True)):
         message = "The html page containing the graphs was written to: %s" %(path_to_html_file)
         logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).info(message)
