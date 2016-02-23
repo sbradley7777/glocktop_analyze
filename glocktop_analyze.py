@@ -22,6 +22,12 @@ NEXT TODO:
   text to file.
 
 Next TODO graphs:
+* Need to figure out why glock_holder_waiters_count_over_time not plotting
+ correctly and why not all y-axis is showing up.
+
+
+
+* For graphs do not like how i am storing date/time and int in list for graphing.
 * MAYBE NEED a GLOCK STAT OBEJECT to hold: hostname, filesname, date, glock,
  holder/waiter count, pids, demote_time.  Stuff like keeping up with
  glock-filesystem might get tricky and eventually parsing of multiple glocktop
@@ -34,7 +40,6 @@ Next TODO graphs:
 
 
 TODO Graphs
-* Get graphs to do precision to only seconds.
 * Verify data in graph correct.
 
 TODO:
@@ -55,6 +60,7 @@ import logging.handlers
 import os
 import os.path
 from optparse import OptionParser, Option, SUPPRESS_HELP
+from operator import itemgetter
 
 import glocktop_analyze
 from glocktop_analyze.utilities import LogWriter
@@ -71,6 +77,7 @@ from glocktop_analyze.glocks_stats import GlocksStats, GlockStat
 from glocktop_analyze.parsers.gfs2_snapshot import parse_gfs2_snapshot, process_gfs2_snapshot
 
 from glocktop_analyze.graphs import generate_graphs_by_glock_type, generate_graphs_by_glock_state
+from glocktop_analyze.graphs import generate_graphs_glocks_holder_waiter
 from glocktop_analyze.graphs import generate_bar_graphs, generate_graph_index_page
 
 # #####################################################################
@@ -343,16 +350,24 @@ if __name__ == "__main__":
         # #######################################################################
         if (not cmdline_opts.disable_stats):
             # Build structure so that filesystem, glocks stats can be analyzed
-            filesystem_count = {}
-            glock_count = {}
-            glock_high_demote_seconds = {}
 
+            # The number of snapshots taken for each filesystem.
+            filesystem_count = {}
+            # The number of times that a glock appear in a snapshot for a
+            # filesystem.
+            glocks_appeared_in_snapshots = {}
+            # The value of demote_seconds if greater than zero for a glocks.
+            glock_high_demote_seconds = {}
+            # The number of holders and waiters including the time taken for
+            # each snapshot it appeared in.
+            glocks_holder_waiters_by_date = {}
             # In some instances the unique key will be
             # "filesystem_name-glock_type/glock_inode". For example:
             # gfs2payroll-4/42ff2. Then for printing the filesystem and glock
             # info could be parsed out.
             for snapshot in snapshots:
                 filesystem_name = snapshot.get_filesystem_name()
+                # Get filesystem stats
                 if (filesystem_count.has_key(filesystem_name)):
                     filesystem_count[filesystem_name]["end_time"] = str(snapshot.get_date_time())
                     filesystem_count[filesystem_name]["count"] = filesystem_count[filesystem_name].get("count") + 1
@@ -360,12 +375,18 @@ if __name__ == "__main__":
                     filesystem_count[filesystem_name] = {"name": filesystem_name, "count":1,
                                                          "start_time":str(snapshot.get_date_time()),
                                                          "end_time":str(snapshot.get_date_time())}
+                # Get glock stats
                 for glock in snapshot.get_glocks():
+                    # Unique key <filename_name>-<glock_type>/<glock_inode>
                     glock_type_inode = "%s-%s/%s" %(filesystem_name, glock.get_type(), glock.get_inode())
-                    if (glock_count.has_key(glock_type_inode)):
-                        glock_count[glock_type_inode] = glock_count.get(glock_type_inode) + 1
+                    if (glocks_appeared_in_snapshots.has_key(glock_type_inode)):
+                        glocks_appeared_in_snapshots[glock_type_inode] = glocks_appeared_in_snapshots.get(glock_type_inode) + 1
+                        dt_holder_waiter_count = (snapshot.get_date_time(), len(glock.get_holders()))
+                        glocks_holder_waiters_by_date[glock_type_inode] += [dt_holder_waiter_count]
                     else:
-                        glock_count[glock_type_inode] = 1
+                        glocks_appeared_in_snapshots[glock_type_inode] = 1
+                        dt_holder_waiter_count = (snapshot.get_date_time(), len(glock.get_holders()))
+                        glocks_holder_waiters_by_date[glock_type_inode] = [dt_holder_waiter_count]
                     demote_time = int(glock.get_demote_time())
                     if (demote_time > 0):
                         if (glock_high_demote_seconds.has_key(glock_type_inode)):
@@ -398,15 +419,14 @@ if __name__ == "__main__":
 
             # Print glock stats
             table = []
-            from operator import itemgetter
-            for pair in sorted(glock_count.items(), key=itemgetter(1), reverse=True):
+            for pair in sorted(glocks_appeared_in_snapshots.items(), key=itemgetter(1), reverse=True):
                 # Only include if there is more than one waiter.
                 if (pair[1] > 1):
                     table.append([pair[0].rsplit("-")[0], pair[0].rsplit("-")[1], pair[1]])
-            ftable = tableize(table, ["Filesystem Name", "Glock Type/Glocks Inode", "Total Holder/Waiter Count"])
+            ftable = tableize(table, ["Filesystem Name", "Glock Type/Glocks Inode", "Found in snapshot"])
             if (len(ftable) > 0):
                 print ftable
-            ftable = tableize(table, ["Filesystem Name", "Glock Type/Glocks Inode", "Total Holder/Waiter Count"], colorize=False)
+            ftable = tableize(table, ["Filesystem Name", "Glock Type/Glocks Inode", "Found in snapshots"], colorize=False)
             if (len(ftable) > 0):
                 if (not write_to_file(path_to_glocktop_stats_file, "%s \n" %(ftable),
                                       append_to_file=True, create_file=True)):
@@ -471,39 +491,69 @@ if __name__ == "__main__":
                         else:
                             snapshots_by_filesystem[snapshot.get_filesystem_name()] = [snapshot]
                 for filesystem_name in snapshots_by_filesystem:
-                    path_to_output_dir = os.path.join(path_to_output_dir, filesystem_name)
-                    generate_graphs_by_glock_type(snapshots_by_filesystem.get(filesystem_name),
-                                                  path_to_output_dir)
+                    generate_graphs_by_glock_type(os.path.join(path_to_output_dir, filesystem_name),
+                                                  snapshots_by_filesystem.get(filesystem_name),
+                                                  format_png=False)
                 for filesystem_name in snapshots_by_filesystem:
-                    path_to_output_dir = os.path.join(path_to_output_dir, filesystem_name)
-                    generate_graphs_by_glock_state(snapshots_by_filesystem.get(filesystem_name),
-                                                   path_to_output_dir)
+                    generate_graphs_by_glock_state(os.path.join(path_to_output_dir, filesystem_name),
+                                                   snapshots_by_filesystem.get(filesystem_name),
+                                                   format_png=False)
 
-                # Glocks with waiter count higher than 2
-                message = "The graphs for the glocks stats with waiter count higher than 1."
+                # A graph for the number of times a glock showed up in snapshots.
+                message = "The graphs for the times a glock showed up in snapshot of the filesystem."
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
-                glocks_with_waiters = {}
-                from operator import itemgetter
-                for pair in sorted(glock_count.items(), key=itemgetter(1), reverse=True):
+                glocks_in_snapshots = {}
+                for pair in sorted(glocks_appeared_in_snapshots.items(), key=itemgetter(1), reverse=True):
                     # Only include if there is more than one waiter.
                     if (pair[1] > 1):
                         filesystem_name = pair[0].rsplit("-")[0]
-                        if (not glocks_with_waiters.has_key(filesystem_name)):
-                            glocks_with_waiters[filesystem_name] = []
-                            glocks_with_waiters.get(filesystem_name).append([])
-                            glocks_with_waiters.get(filesystem_name).append([])
-                        glocks_with_waiters.get(filesystem_name)[0].append(pair[0].rsplit("-")[1])
-                        glocks_with_waiters.get(filesystem_name)[1].append(pair[1])
+                        if (not glocks_in_snapshots.has_key(filesystem_name)):
+                            glocks_in_snapshots[filesystem_name] = []
+                            glocks_in_snapshots.get(filesystem_name).append([])
+                            glocks_in_snapshots.get(filesystem_name).append([])
+                        glocks_in_snapshots.get(filesystem_name)[0].append(pair[0].rsplit("-")[1])
+                        glocks_in_snapshots.get(filesystem_name)[1].append(pair[1])
                 path_to_graphs = []
-                for filesystem_name in glocks_with_waiters.keys():
-                    path_to_output_dir = os.path.join(path_to_output_dir, filesystem_name)
-                    path_to_graphs = generate_bar_graphs(path_to_output_dir,
-                                                          glocks_with_waiters.get(filesystem_name)[0],
-                                                          glocks_with_waiters.get(filesystem_name)[1],
-                                                          "%s - Glock Waiter Count" %(filesystem_name),
+                for filesystem_name in glocks_in_snapshots.keys():
+                    path_to_graphs = generate_bar_graphs(os.path.join(path_to_output_dir, filesystem_name),
+                                                          glocks_in_snapshots.get(filesystem_name)[0],
+                                                          glocks_in_snapshots.get(filesystem_name)[1],
+                                                          "%s - Glock was in Snapshots" %(filesystem_name),
                                                           "glocks", "waiter count", format_png=False)
-                    generate_graph_index_page(path_to_output_dir, path_to_graphs, "%s - Glock Waiter Count" %(filesystem_name))
+                    generate_graph_index_page(os.path.join(path_to_output_dir, filesystem_name),
+                                              path_to_graphs, "Glock in Snapshots")
 
+                # Graph the glocks number of holders and waiters over time.
+                # Get the date/time of all the snapshots for each filesystems.
+                filesystem_snapshot_dt = {}
+                for snapshot in snapshots:
+                    filesystem_name = snapshot.get_filesystem_name()
+                    # Get filesystem stats
+                    if (filesystem_snapshot_dt.has_key(filesystem_name)):
+                        filesystem_snapshot_dt[filesystem_name].append(snapshot.get_date_time())
+                    else:
+                        filesystem_snapshot_dt[filesystem_name] = [snapshot.get_date_time()]
+
+                for filesystem_name in glocks_in_snapshots.keys():
+                    glocks_holder_waiters_counter = {}
+                    for gkey in glocks_holder_waiters_by_date.keys():
+                        hw_count = 0
+                        if (gkey.startswith(filesystem_name)):
+                            for gtuple in glocks_holder_waiters_by_date.get(gkey):
+                                hw_count += gtuple[1]
+                        if (hw_count > 1):
+                            glocks_holder_waiters_counter[gkey] = hw_count
+                    # Should i just get the top 10 or hightest counts on the glocks.
+                    # Sort the items
+                    #for pair in sorted(glocks_holder_waiters_count.items(), key=itemgetter(1), reverse=True):
+                    #    print "%s: %d" %(pair[0], pair[1])
+                    glocks_to_graph = {key.rsplit("-")[1]: glocks_holder_waiters_by_date[key] for key in glocks_holder_waiters_by_date if key in glocks_holder_waiters_counter.keys()}
+                    generate_graphs_glocks_holder_waiter(os.path.join(path_to_output_dir, filesystem_name),
+                                                         glocks_to_graph,
+                                                         filesystem_snapshot_dt[filesystem_name], format_png=False)
+
+                message = "The graphs were to the directory: %s" %(path_to_output_dir)
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).info(message)
         except AttributeError:
             # Graphing must be disabled since option does not exists.
             pass

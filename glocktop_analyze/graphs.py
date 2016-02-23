@@ -14,7 +14,7 @@ except (ImportError, NameError):
     message = "Failed to import pygal. The python-pygal package needs to be installed."
     logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
 
-def generate_graphs_by_glock_type(snapshots, path_to_output_dir, format_png=False):
+def generate_graphs_by_glock_type(path_to_output_dir, snapshots, format_png=False):
     if (snapshots):
         path_to_image_files = []
         snapshot_date_time = []
@@ -40,9 +40,9 @@ def generate_graphs_by_glock_type(snapshots, path_to_output_dir, format_png=Fals
                                                         "Time of Snapshots", "Glock States",
                                                         format_png= format_png)
         if (path_to_image_files):
-            generate_graph_index_page(path_to_output_dir, path_to_image_files, "%s-glock_types-graphs" %(filesystem_name))
+            generate_graph_index_page(path_to_output_dir, path_to_image_files, "Glock Types")
 
-def generate_graphs_by_glock_state(snapshots, path_to_output_dir, format_png=False):
+def generate_graphs_by_glock_state(path_to_output_dir, snapshots, format_png=False):
     if (snapshots):
         path_to_image_files = []
         snapshot_date_time = []
@@ -68,7 +68,41 @@ def generate_graphs_by_glock_state(snapshots, path_to_output_dir, format_png=Fal
                                                         "Time of Snapshots", "Glock Types",
                                                         format_png=format_png)
         if (path_to_image_files):
-            generate_graph_index_page(path_to_output_dir, path_to_image_files, "%s-glocks_states-graphs" %(filesystem_name))
+            generate_graph_index_page(path_to_output_dir, path_to_image_files, "Glocks States")
+
+def generate_graphs_glocks_holder_waiter(path_to_output_dir, glocks_holder_waiters_by_date, snapshots_date_time, format_png=False):
+    # The x-axis will be the snapshots_date_time. Each glock in the map has a
+    # value that is holder/waiter count at some date_time (we call gdt) instance
+    # that should be a value in the snapshots_date_time.  If there is no gdt
+    # instance for a date_time in snapshots_date_time then we set value at None
+    # in graph.
+    path_to_image_files = []
+    if ((glocks_holder_waiters_by_date) and (snapshots_date_time)):
+
+        def get_index_in_list(date_time_list, date_time):
+            index = 0;
+            for index in range(0, len(date_time_list)):
+                if (date_time_list[index] == date_time):
+                    return index
+                index += 1
+            return -1
+
+        # Set the Y axis and create a list the same size as snapshots_date_time and set to None as each value.
+        y_axis = dict.fromkeys(glocks_holder_waiters_by_date.keys(), [None] * len(snapshots_date_time))
+        for gkey in glocks_holder_waiters_by_date.keys():
+            for t in glocks_holder_waiters_by_date.get(gkey):
+                index_in_dt = get_index_in_list(snapshots_date_time, t[0])
+                if (index_in_dt >= 0):
+                    if (y_axis.has_key(gkey)):
+                        y_axis[gkey][index_in_dt] = t[1]
+        path_to_image_files += generate_date_graphs(path_to_output_dir,
+                                                    snapshots_date_time,
+                                                    y_axis,
+                                                    "Glock Holder and Waiters",
+                                                    "Time of Snapshots", "Glock Type/Inode",
+                                                    format_png=format_png)
+        if (path_to_image_files):
+            generate_graph_index_page(path_to_output_dir, path_to_image_files, "Glock Holder and Waiters")
 
 def generate_date_graphs(path_to_output_dir, x_axis, y_axis_map, title, x_axis_title, y_axis_title, format_png=False):
     gstyle = Style(
@@ -80,14 +114,18 @@ def generate_date_graphs(path_to_output_dir, x_axis, y_axis_map, title, x_axis_t
         foreground_dark='rgba(0, 0, 0, 0.7)',
         colors=('#5DA5DA', '#FAA43A','#60BD68', '#F17CB0', '#4D4D4D', '#B2912F','#B276B2', '#DECF3F', '#F15854')
     )
+    #human_readable is what introduce the strange Y data labels.
     graph = pygal.DateY(x_label_rotation=20, title=title,
                         x_title=x_axis_title, y_title=y_axis_title,
-                        legend_at_bottom=True, human_readable=True,
-                        style=gstyle)
+                        legend_at_bottom=True, human_readable=False,
+                        style=gstyle, x_labels_major_every=5)
+    # include_x_axis=True)
+    graph.x_label_format = "%Y-%m-%d %I:%M:%S"
     # Add the Y-axis to this graph for this glock type for this gfs2 filesystem.
     for key in y_axis_map.keys():
-        graph.add(key, list(zip(tuple(x_axis),
-                                  tuple(y_axis_map.get(key))))+[None,None])
+        tlist = list(zip(tuple(x_axis),
+                         tuple(y_axis_map.get(key))))+[None,None]
+        graph.add(key, tlist)
     path_to_image_files = []
     path_to_image_dir = os.path.join(path_to_output_dir, "graphs")
     if (mkdirs(path_to_image_dir)):
@@ -182,7 +220,7 @@ def generate_graph_index_page(path_to_output_dir, path_to_graphs, title):
     path_to_html_file = os.path.join(path_to_output_dir, "%s.html" %(title.replace(" - ", "-").replace(" ", "_").lower()))
     if (write_to_file(path_to_html_file, html_data, append_to_file=False, create_file=True)):
         message = "The html page containing the graphs was written to: %s" %(path_to_html_file)
-        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).info(message)
+        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
     else:
         message = "There was an error writing the html page containing the graphs to: %s" %(path_to_html_file)
-        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
+        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
