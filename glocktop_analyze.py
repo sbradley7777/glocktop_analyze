@@ -14,19 +14,27 @@
 @copyright : GPLv3
 
 
-NEXT TODO:
-* Need to fix formatting of glocktop_glocks_stats.txt because has bash escapes
-  still in it.
+Current TODO:
+* Move stats to plugin setup. Go through snapshots once and create dict{}
+  container for stats. Then pass the container to plugin. Each stat-plugin will
+  take a dict{} and do work on it.
+
+RFEs:
 * Add remaining stat queries and stat tables like for pids, DLM.
 * Create html pages for the summary, stats, everything instead of writing plain
   text to file.
+* NEED OPTION: To disable_call_trace so call trace not printed. Still not
+  parsing call_trace or U data.
+* Warning on high demote_seconds, high waiter count, high DLM traffic.
+* Could i combine the data into 1 file. Take 8 glocktops, then write to 1 file
+  with everything sorted by date to see what is happenign on all nodes at around
+  same time. Do not think a way to group cause started at different times and
+  takes different times to print data.
 
-Next TODO graphs:
+
+RFEs for graphs:
 * Need to figure out why glock_holder_waiters_count_over_time not plotting
  correctly and why not all y-axis is showing up.
-
-
-
 * For graphs do not like how i am storing date/time and int in list for graphing.
 * MAYBE NEED a GLOCK STAT OBEJECT to hold: hostname, filesname, date, glock,
  holder/waiter count, pids, demote_time.  Stuff like keeping up with
@@ -37,22 +45,7 @@ Next TODO graphs:
   - pid -> glocks with that pid | count
   - glock -> pids
   - peak for highest number of holder/waiters for each glock
-
-
-TODO Graphs
 * Verify data in graph correct.
-
-TODO:
-* NEED OPTION: Add ignore list items like ENDED, N/A from U lines see man page.
-* NEED OPTION: To disable_call_trace so call trace not printed.
-* Warning on high demote_seconds, high waiter count, high DLM traffic.
-
-RFEs:
-* Could i combine the data into 1 file. Take 8 glocktops, then write to 1 file
-  with everything sorted by date to see what is happenign on all nodes at around
-  same time. Do not think a way to group cause started at different times and
-  takes different times to print data.
-
 """
 import sys
 import logging
@@ -69,7 +62,7 @@ logger = LogWriter(glocktop_analyze.MAIN_LOGGER_NAME,
                    logging.INFO,
                    glocktop_analyze.MAIN_LOGGER_FORMAT,
                    disableConsoleLog=False)
-from glocktop_analyze.utilities import ColorizeConsoleText, get_data_from_file, tableize, mkdirs, write_to_file
+from glocktop_analyze.utilities import ColorizeConsoleText, get_data_from_file, tableize, write_to_file
 import glocktop_analyze.glocks_stats
 from glocktop_analyze.gfs2_snapshot import GFS2Snapshot, DLMActivity
 from glocktop_analyze.glock import Glock, GlockHolder, GlockObject
@@ -133,6 +126,11 @@ def __get_options(version) :
                           type="string",
                           metavar="<gfs2 filesystem name>",
                           default=[])
+    cmd_parser.add_option("-E", "--ignore_ended_processes",
+                        action="store_true",
+                         dest="ignore_ended_processes",
+                         help="ignore all glocks that contain 1 holder for ended process",
+                         default=False)
     cmd_parser.add_option("-W", "--disable_show_waiters",
                           action="store_true",
                           dest="disable_show_waiters",
@@ -294,7 +292,7 @@ if __name__ == "__main__":
                         process_gfs2_snapshot(gfs2_snapshot, snapshot_lines)
                         snapshots.append(gfs2_snapshot)
                 # Process the new snapshot
-                gfs2_snapshot = parse_gfs2_snapshot(line)
+                gfs2_snapshot = parse_gfs2_snapshot(line, cmdline_opts.ignore_ended_processes)
                 snapshot_lines = []
             else:
                 snapshot_lines.append(line)
@@ -321,6 +319,7 @@ if __name__ == "__main__":
                 glocks = snapshot.find_glock(cmdline_opts.glock_type, cmdline_opts.glock_inode.replace("0x", ""))
             else:
                 glocks = snapshot.get_glocks()
+
             for glock in glocks:
                 glock_holders = glock.get_holders()
                 if (len(glock_holders) >= cmdline_opts.minimum_waiter_count):
@@ -334,23 +333,53 @@ if __name__ == "__main__":
                 glocktop_summary_console += "%s\n%s\n" %(ColorizeConsoleText.red(str(snapshot)), current_summary)
                 glocktop_summary_file += "%s\n%s\n" %(str(snapshot), current_summary)
 
-        print glocktop_summary_console
+        print "%s\n" %(glocktop_summary_console.rstrip())
         # The path to directory where all files written for this host will be
         # written.
         path_to_output_dir = os.path.join(cmdline_opts.path_to_output_dir, hostname)
-        if (mkdirs(path_to_output_dir)):
-            path_to_glocktop_summary_file = os.path.join(path_to_output_dir, "glocktop_summary.txt")
-            if (not write_to_file(path_to_glocktop_summary_file, glocktop_summary_file,
-                                  append_to_file=False, create_file=True)):
-                message = "An error occurred writing the glocktop summary file: %s" %(path_to_glocktop_summary_file)
-                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
+
+        path_to_glocktop_summary_file = os.path.join(path_to_output_dir, "glocktop_summary.txt")
+        if (not write_to_file(path_to_glocktop_summary_file, glocktop_summary_file,
+                              append_to_file=False, create_file=True)):
+            message = "An error occurred writing the glocktop summary file: %s" %(path_to_glocktop_summary_file)
+            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
 
         # #######################################################################
         # Gather, print, and graph  stats
         # #######################################################################
         if (not cmdline_opts.disable_stats):
-            # Build structure so that filesystem, glocks stats can be analyzed
+            # Print or write data gathered from the lines that started with "S"
+            # for peroidic glock stats.
+            summary_glocks_stats_console = ""
+            summary_glocks_stats_file_map = {}
+            for snapshot in snapshots:
+                glocks_stats = snapshot.get_glocks_stats()
+                if (not glocks_stats == None):
+                    filesystem_name = glocks_stats.get_filesystem_name()
+                    if (not summary_glocks_stats_file_map.has_key(filesystem_name)):
+                        summary_glocks_stats_file_map[filesystem_name] = ""
+                    summary_glocks_stats_file = "Glock stats at %s for filesystem: %s\n%s\n\n" %(glocks_stats.get_date_time().strftime("%Y-%m-%d %H:%M:%S"),
+                                                                                                 glocks_stats.get_filesystem_name(), str(glocks_stats))
+                    summary_glocks_stats_file_map[filesystem_name] += summary_glocks_stats_file
 
+
+
+                    formatted_table = tableize(glocks_stats.get_table(), ["Glock States"] + glocktop_analyze.glocks_stats.GLOCK_STATES, colorize=True).rstrip()
+                    summary_glocks_stats_console += "Glock stats at %s for filesystem: %s\n%s\n\n" %(ColorizeConsoleText.orange(glocks_stats.get_date_time().strftime("%Y-%m-%d %H:%M:%S")),
+                                                                                                     ColorizeConsoleText.orange(glocks_stats.get_filesystem_name()), formatted_table)
+
+            if (summary_glocks_stats_console):
+                print summary_glocks_stats_console
+            if (summary_glocks_stats_file):
+                for filesystem_name in summary_glocks_stats_file_map.keys():
+                    path_to_glocktop_glocks_stats_file = os.path.join(os.path.join(path_to_output_dir, filesystem_name), "glocks_stats.txt")
+                    if (not write_to_file(path_to_glocktop_glocks_stats_file, summary_glocks_stats_file_map.get(filesystem_name),
+                                          append_to_file=False, create_file=True)):
+                        message = "An error occurred writing the glocks stats to the file: %s" %(path_to_glocktop_glocks_stats_file)
+                        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+
+            # Do various stats on the snapshots.
+            #
             # The number of snapshots taken for each filesystem.
             filesystem_count = {}
             # The number of times that a glock appear in a snapshot for a
@@ -396,10 +425,6 @@ if __name__ == "__main__":
                         else:
                             glock_high_demote_seconds[glock_type_inode] = "%s" %(demote_time)
 
-            print
-            print "---------------------------------------------------------------------------------"
-            print "                             Stats for glocktop                                  "
-            print "---------------------------------------------------------------------------------"
             # Print filesystem stats
             path_to_glocktop_stats_file = os.path.join(path_to_output_dir, "glocktop_stats.txt")
             table = []
@@ -460,23 +485,13 @@ if __name__ == "__main__":
                     message = "An error occurred writing the glocktop stats file: %s" %(path_to_glocktop_stats_file)
                     logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
 
-            print
-            print "---------------------------------------------------------------------------------"
-            print "                             Stats for glocks                                    "
-            print "---------------------------------------------------------------------------------"
-            summary_glock_stats = ""
-            for snapshot in snapshots:
-                glocks_stats = snapshot.get_glocks_stats()
-                if (not glocks_stats == None):
-                    summary_glock_stats += "\n%s\n" %(str(glocks_stats))
-            if (summary_glock_stats):
-                print summary_glock_stats
-                path_to_glocktop_glocks_stats_file = os.path.join(path_to_output_dir, "glocktop_glocks_stats.txt")
-                if (not write_to_file(path_to_glocktop_glocks_stats_file, summary_glock_stats,
-                                      append_to_file=True, create_file=True)):
-                    message = "An error occurred writing the glocktop stats file: %s" %(path_to_glocktop_stats_file)
-                    logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+        # #######################################################################
+        # Create graphs
+        # #######################################################################
         try:
+            # svg does better charts. png support requires the python files:
+            # lxml, cairosvg, tinycss, cssselect
+            enable_png_format=False
             if (not cmdline_opts.disable_graphs):
                 # Graph the glocks stats.
                 message = "The graphs for the glocks stats will be generated."
@@ -493,11 +508,11 @@ if __name__ == "__main__":
                 for filesystem_name in snapshots_by_filesystem:
                     generate_graphs_by_glock_type(os.path.join(path_to_output_dir, filesystem_name),
                                                   snapshots_by_filesystem.get(filesystem_name),
-                                                  format_png=False)
+                                                  format_png=enable_png_format)
                 for filesystem_name in snapshots_by_filesystem:
                     generate_graphs_by_glock_state(os.path.join(path_to_output_dir, filesystem_name),
                                                    snapshots_by_filesystem.get(filesystem_name),
-                                                   format_png=False)
+                                                   format_png=enable_png_format)
 
                 # A graph for the number of times a glock showed up in snapshots.
                 message = "The graphs for the times a glock showed up in snapshot of the filesystem."
@@ -519,12 +534,12 @@ if __name__ == "__main__":
                                                           glocks_in_snapshots.get(filesystem_name)[0],
                                                           glocks_in_snapshots.get(filesystem_name)[1],
                                                           "%s - Glock was in Snapshots" %(filesystem_name),
-                                                          "glocks", "waiter count", format_png=False)
+                                                          "glocks", "waiter count", format_png=enable_png_format)
                     generate_graph_index_page(os.path.join(path_to_output_dir, filesystem_name),
                                               path_to_graphs, "Glock in Snapshots")
 
                 # Graph the glocks number of holders and waiters over time.
-                # Get the date/time of all the snapshots for each filesystems.
+                # Get the date/time of all the snapshots bor each filesystems.
                 filesystem_snapshot_dt = {}
                 for snapshot in snapshots:
                     filesystem_name = snapshot.get_filesystem_name()
@@ -534,6 +549,7 @@ if __name__ == "__main__":
                     else:
                         filesystem_snapshot_dt[filesystem_name] = [snapshot.get_date_time()]
 
+                # Find glocks that had more than one holder+waiters.
                 for filesystem_name in glocks_in_snapshots.keys():
                     glocks_holder_waiters_counter = {}
                     for gkey in glocks_holder_waiters_by_date.keys():
@@ -550,7 +566,7 @@ if __name__ == "__main__":
                     glocks_to_graph = {key.rsplit("-")[1]: glocks_holder_waiters_by_date[key] for key in glocks_holder_waiters_by_date if key in glocks_holder_waiters_counter.keys()}
                     generate_graphs_glocks_holder_waiter(os.path.join(path_to_output_dir, filesystem_name),
                                                          glocks_to_graph,
-                                                         filesystem_snapshot_dt[filesystem_name], format_png=False)
+                                                         filesystem_snapshot_dt[filesystem_name], format_png=enable_png_format)
 
                 message = "The graphs were to the directory: %s" %(path_to_output_dir)
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).info(message)

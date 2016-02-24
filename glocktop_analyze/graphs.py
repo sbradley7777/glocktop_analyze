@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import os
 import logging
+from datetime import datetime
 
 import glocktop_analyze
 from glocktop_analyze.gfs2_snapshot import GFS2Snapshot
@@ -78,7 +79,6 @@ def generate_graphs_glocks_holder_waiter(path_to_output_dir, glocks_holder_waite
     # in graph.
     path_to_image_files = []
     if ((glocks_holder_waiters_by_date) and (snapshots_date_time)):
-
         def get_index_in_list(date_time_list, date_time):
             index = 0;
             for index in range(0, len(date_time_list)):
@@ -88,13 +88,14 @@ def generate_graphs_glocks_holder_waiter(path_to_output_dir, glocks_holder_waite
             return -1
 
         # Set the Y axis and create a list the same size as snapshots_date_time and set to None as each value.
-        y_axis = dict.fromkeys(glocks_holder_waiters_by_date.keys(), [None] * len(snapshots_date_time))
+        y_axis = {}
         for gkey in glocks_holder_waiters_by_date.keys():
+            if (not y_axis.has_key(gkey)):
+                y_axis[gkey] = [None] * len(snapshots_date_time)
             for t in glocks_holder_waiters_by_date.get(gkey):
                 index_in_dt = get_index_in_list(snapshots_date_time, t[0])
                 if (index_in_dt >= 0):
-                    if (y_axis.has_key(gkey)):
-                        y_axis[gkey][index_in_dt] = t[1]
+                    y_axis[gkey][index_in_dt] = t[1]
         path_to_image_files += generate_date_graphs(path_to_output_dir,
                                                     snapshots_date_time,
                                                     y_axis,
@@ -118,7 +119,8 @@ def generate_date_graphs(path_to_output_dir, x_axis, y_axis_map, title, x_axis_t
     graph = pygal.DateY(x_label_rotation=20, title=title,
                         x_title=x_axis_title, y_title=y_axis_title,
                         legend_at_bottom=True, human_readable=False,
-                        style=gstyle, x_labels_major_every=5)
+                        style=gstyle, show_minor_x_labels=True,
+                        print_values=False)
     # include_x_axis=True)
     graph.x_label_format = "%Y-%m-%d %I:%M:%S"
     # Add the Y-axis to this graph for this glock type for this gfs2 filesystem.

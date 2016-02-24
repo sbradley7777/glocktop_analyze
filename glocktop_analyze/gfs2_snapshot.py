@@ -10,14 +10,16 @@ from glocktop_analyze.glock import Glock
 
 class GFS2Snapshot():
     # A collection of glocks for a filesystem at a specific time.
-    def __init__(self, filesystem_name, hostname, date_time, dlm_activity = None):
+    def __init__(self, filesystem_name, hostname, date_time, dlm_activity = None, ignore_ended_processes=False):
         self.__filesystem_name = filesystem_name
         self.__hostname = hostname
         self.__date_time = date_time
         self.__dlm_activity = dlm_activity
+        self.__ignore_ended_processes = ignore_ended_processes
 
         self.__glocks = []
         self.__glocks_stats = None
+
 
     def __str__(self):
         dlm_activity = ""
@@ -38,6 +40,12 @@ class GFS2Snapshot():
         self.__glocks.append(glock)
 
     def get_glocks(self):
+        if (self.__ignore_ended_processes):
+            glocks_not_ended_process = []
+            for g in self.__glocks:
+                if (not g.has_ended_process()):
+                    glocks_not_ended_process.append(g)
+            return glocks_not_ended_process
         return self.__glocks
 
     def find_glock(self, glock_type, glock_inode):
@@ -84,4 +92,3 @@ class DLMActivity():
 
     def get_activity_count(self):
         return self.__activity_count
-

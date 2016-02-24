@@ -23,19 +23,7 @@ class GlocksStats():
 
 
     def __str__(self):
-        rstring = ""
-        table = []
-        for state in GLOCK_STATES:
-            cstats = []
-            for gtype in GLOCK_TYPES:
-                cstats.append(self.__glocks_stats_map.get(self.__generate_hash(gtype, state)).get_stat())
-            cstats.insert(0, state)
-            table.append(cstats)
-        ftable = tableize(table, ["Glock States"] + GLOCK_STATES)
-        if (ftable):
-            rstring += "Glock stats at %s for filesystem: %s\n%s\n" %(ColorizeConsoleText.orange(self.get_date_time().strftime("%Y-%m-%d %H:%M:%S")),
-                                                                      ColorizeConsoleText.orange(self.get_filesystem_name()), ftable)
-        return rstring.rstrip()
+        return tableize(self.get_table(), ["Glock States"] + GLOCK_STATES, colorize=False).rstrip()
 
     def __generate_hash(self, gtype, state):
         return "%s-%s" %(gtype, state)
@@ -79,6 +67,16 @@ class GlocksStats():
             stats[gtype] = self.get_stat(gtype, state)
         return stats
 
+    def get_table(self):
+        table = []
+        for state in GLOCK_STATES:
+            cstats = []
+            for gtype in GLOCK_TYPES:
+                cstats.append(self.__glocks_stats_map.get(self.__generate_hash(gtype, state)).get_stat())
+            cstats.insert(0, state)
+            table.append(cstats)
+        return table
+
 class GlockStat():
     def __init__(self, filesystem_name, gtype, state):
         self.__filesystem_name = filesystem_name
@@ -100,3 +98,4 @@ class GlockStat():
 
     def set_stat(self, stat):
         self.__stat = stat
+

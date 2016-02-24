@@ -48,15 +48,22 @@ class Glock():
     def get_glock_object(self):
         return self.__glock_object
 
+    def has_ended_process(self):
+        if (not len(self.get_holders()) > 1):
+            for gh in self.get_holders():
+                if (gh.get_command().lower().strip() == "(ended)"):
+                    return True
+        return False
+
 class GlockHolder:
     # The GlockHolder can be the holder of glock or waiter of glocks
-    def __init__(self, text, state, flags, error, pid, comm):
+    def __init__(self, text, state, flags, error, pid, command):
         self.__text = text
         self.__state = state
         self.__flags = flags
         self.__error = error
         self.__pid = pid
-        self.__comm = comm
+        self.__command = command
 
     def __str__(self):
         return self.get_text()

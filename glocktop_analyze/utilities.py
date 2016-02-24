@@ -324,22 +324,24 @@ def mkdirs(path_to_dir):
 
 def write_to_file(path_to_filename, data, append_to_file=True, create_file=False):
     [parent_dir, filename] = os.path.split(path_to_filename)
-    if (os.path.isfile(path_to_filename) or (os.path.isdir(parent_dir) and create_file)):
-        try:
-            file_mode = "w"
-            if (append_to_file):
-                file_mode = "a"
-            fout = open(path_to_filename, file_mode)
-            for line in data:
-                fout.write(line)
-            fout.close()
-            return True
-        except UnicodeEncodeError, e:
-            message = "There was a unicode encode error writing to the file: %s." %(path_to_filename)
-            logging.getLogger(MAIN_LOGGER_NAME).error(message)
-            return False
-        except IOError:
-            message = "There was an error writing to the file: %s." %(path_to_filename)
-            logging.getLogger(MAIN_LOGGER_NAME).error(message)
-            return False
+    if (mkdirs(parent_dir)):
+        if (os.path.isfile(path_to_filename) or create_file):
+            try:
+                file_mode = "w"
+                if (append_to_file):
+                    file_mode = "a"
+                fout = open(path_to_filename, file_mode)
+                for line in data:
+                    fout.write(line)
+                fout.close()
+                return True
+            except UnicodeEncodeError, e:
+                message = "There was a unicode encode error writing to the file: %s." %(path_to_filename)
+                logging.getLogger(MAIN_LOGGER_NAME).error(message)
+            except IOError, e:
+                message = "There was an error writing to the file: %s." %(path_to_filename)
+                logging.getLogger(MAIN_LOGGER_NAME).error(message)
+    else:
+        message = "The parent directory of the file could not be created: %s." %(path_to_filename)
+        logging.getLogger(MAIN_LOGGER_NAME).error(message)
     return False
