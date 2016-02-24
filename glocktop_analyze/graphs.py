@@ -1,4 +1,7 @@
 #!/usr/bin/python
+# Options for the charts and graphs are located in the followig file:
+# /usr/lib/python2.7/site-packages/pygal/config.py
+
 import os
 import logging
 from datetime import datetime
@@ -7,6 +10,9 @@ import glocktop_analyze
 from glocktop_analyze.gfs2_snapshot import GFS2Snapshot
 from glocktop_analyze.glocks_stats import GlocksStats, GlockStat
 from glocktop_analyze.utilities import LogWriter, mkdirs, write_to_file
+
+MAXIMUM_X_POINTS = 200
+MAXIMUM_Y_POINTS = 200
 
 try:
     import pygal
@@ -122,7 +128,7 @@ def generate_date_graphs(path_to_output_dir, x_axis, y_axis_map, title, x_axis_t
                         style=gstyle, show_minor_x_labels=True,
                         print_values=False)
     # include_x_axis=True)
-    graph.x_label_format = "%Y-%m-%d %I:%M:%S"
+    graph.x_label_format = "%Y-%m-%d %H:%M:%S"
     # Add the Y-axis to this graph for this glock type for this gfs2 filesystem.
     for key in y_axis_map.keys():
         tlist = list(zip(tuple(x_axis),

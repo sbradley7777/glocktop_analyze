@@ -15,6 +15,12 @@
 
 
 Current TODO:
+* Move the max_glocks_to_graph to graphs. Need to create a way to get smaller
+  subset of data if data has over 100 or 200 snapshots. 8000 graph points takes forever
+  * 10.
+* Do i need to set as global var or some option for the var: max_glocks_to_graph
+
+
 * Move stats to plugin setup. Go through snapshots once and create dict{}
   container for stats. Then pass the container to plugin. Each stat-plugin will
   take a dict{} and do work on it.
@@ -46,6 +52,7 @@ RFEs for graphs:
   - glock -> pids
   - peak for highest number of holder/waiters for each glock
 * Verify data in graph correct.
+
 """
 import sys
 import logging
@@ -54,6 +61,7 @@ import os
 import os.path
 from optparse import OptionParser, Option, SUPPRESS_HELP
 from operator import itemgetter
+from collections import OrderedDict
 
 import glocktop_analyze
 from glocktop_analyze.utilities import LogWriter
@@ -493,7 +501,7 @@ if __name__ == "__main__":
             # lxml, cairosvg, tinycss, cssselect
             enable_png_format=False
             if (not cmdline_opts.disable_graphs):
-                # Graph the glocks stats.
+                # Graph the glocks stats and glock types
                 message = "The graphs for the glocks stats will be generated."
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
                 # Sort all the snapshots into filesystem bins.
@@ -514,9 +522,19 @@ if __name__ == "__main__":
                                                    snapshots_by_filesystem.get(filesystem_name),
                                                    format_png=enable_png_format)
 
-                # A graph for the number of times a glock showed up in snapshots.
-                message = "The graphs for the times a glock showed up in snapshot of the filesystem."
+                # Graph the glocks number of holders and waiters over time.
+                message = "Generating the graphs for glock's holder+waiter count over time."
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+                # Get the date/time of all the snapshots bor each filesystems.
+                filesystem_snapshot_dt = {}
+                for snapshot in snapshots:
+                    filesystem_name = snapshot.get_filesystem_name()
+                    # Get filesystem stats
+                    if (filesystem_snapshot_dt.has_key(filesystem_name)):
+                        filesystem_snapshot_dt[filesystem_name].append(snapshot.get_date_time())
+                    else:
+                        filesystem_snapshot_dt[filesystem_name] = [snapshot.get_date_time()]
+
                 glocks_in_snapshots = {}
                 for pair in sorted(glocks_appeared_in_snapshots.items(), key=itemgetter(1), reverse=True):
                     # Only include if there is more than one waiter.
@@ -528,26 +546,6 @@ if __name__ == "__main__":
                             glocks_in_snapshots.get(filesystem_name).append([])
                         glocks_in_snapshots.get(filesystem_name)[0].append(pair[0].rsplit("-")[1])
                         glocks_in_snapshots.get(filesystem_name)[1].append(pair[1])
-                path_to_graphs = []
-                for filesystem_name in glocks_in_snapshots.keys():
-                    path_to_graphs = generate_bar_graphs(os.path.join(path_to_output_dir, filesystem_name),
-                                                          glocks_in_snapshots.get(filesystem_name)[0],
-                                                          glocks_in_snapshots.get(filesystem_name)[1],
-                                                          "%s - Glock was in Snapshots" %(filesystem_name),
-                                                          "glocks", "waiter count", format_png=enable_png_format)
-                    generate_graph_index_page(os.path.join(path_to_output_dir, filesystem_name),
-                                              path_to_graphs, "Glock in Snapshots")
-
-                # Graph the glocks number of holders and waiters over time.
-                # Get the date/time of all the snapshots bor each filesystems.
-                filesystem_snapshot_dt = {}
-                for snapshot in snapshots:
-                    filesystem_name = snapshot.get_filesystem_name()
-                    # Get filesystem stats
-                    if (filesystem_snapshot_dt.has_key(filesystem_name)):
-                        filesystem_snapshot_dt[filesystem_name].append(snapshot.get_date_time())
-                    else:
-                        filesystem_snapshot_dt[filesystem_name] = [snapshot.get_date_time()]
 
                 # Find glocks that had more than one holder+waiters.
                 for filesystem_name in glocks_in_snapshots.keys():
@@ -559,15 +557,23 @@ if __name__ == "__main__":
                                 hw_count += gtuple[1]
                         if (hw_count > 1):
                             glocks_holder_waiters_counter[gkey] = hw_count
-                    # Should i just get the top 10 or hightest counts on the glocks.
-                    # Sort the items
-                    #for pair in sorted(glocks_holder_waiters_count.items(), key=itemgetter(1), reverse=True):
-                    #    print "%s: %d" %(pair[0], pair[1])
+
+                    # Only graph the top 10 glocks with highest holder+waiter count.
+                    max_glocks_to_graph = 10
+                    glocks_highest_count = {}
+                    index = 1
+                    for t in reversed(OrderedDict(sorted(glocks_holder_waiters_counter.items(), key=lambda t: t[1]))):
+                        if (index > max_glocks_to_graph):
+                            try:
+                                del glocks_holder_waiters_counter[t]
+                            except KeyError:
+                                pass
+                        index += 1
+                    # Map only glocks that had more than 1 holder+waiter so the possible items to graph is lower.
                     glocks_to_graph = {key.rsplit("-")[1]: glocks_holder_waiters_by_date[key] for key in glocks_holder_waiters_by_date if key in glocks_holder_waiters_counter.keys()}
                     generate_graphs_glocks_holder_waiter(os.path.join(path_to_output_dir, filesystem_name),
                                                          glocks_to_graph,
                                                          filesystem_snapshot_dt[filesystem_name], format_png=enable_png_format)
-
                 message = "The graphs were to the directory: %s" %(path_to_output_dir)
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).info(message)
         except AttributeError:
