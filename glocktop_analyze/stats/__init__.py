@@ -24,6 +24,7 @@ except (ImportError, NameError):
 
 class Stats(object):
     def __init__(self, snapshots, title):
+        # A list of snapshots of a particular filesystem.
         self.__snapshots = snapshots
         self.__title = title
 
@@ -32,6 +33,11 @@ class Stats(object):
 
     def get_title(self):
         return self.__title
+
+    def get_filesystem_name(self):
+        if (self.__snapshots):
+            return self.__snapshots[0].get_filesystem_name()
+        return ""
 
     def analayze(self):
         pass

@@ -334,14 +334,16 @@ def write_to_file(path_to_filename, data, append_to_file=True, create_file=False
                 for line in data:
                     fout.write(line)
                 fout.close()
+                message = "The file was successfully written to: %s" %(path_to_filename)
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
                 return True
             except UnicodeEncodeError, e:
                 message = "There was a unicode encode error writing to the file: %s." %(path_to_filename)
-                logging.getLogger(MAIN_LOGGER_NAME).error(message)
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
             except IOError, e:
                 message = "There was an error writing to the file: %s." %(path_to_filename)
-                logging.getLogger(MAIN_LOGGER_NAME).error(message)
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
     else:
         message = "The parent directory of the file could not be created: %s." %(path_to_filename)
-        logging.getLogger(MAIN_LOGGER_NAME).error(message)
+        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
     return False

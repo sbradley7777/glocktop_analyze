@@ -21,10 +21,6 @@ Current TODO:
 * Do i need to set as global var or some option for the var: max_glocks_to_graph
 
 
-* Move stats to plugin setup. Go through snapshots once and create dict{}
-  container for stats. Then pass the container to plugin. Each stat-plugin will
-  take a dict{} and do work on it.
-
 RFEs:
 * Add remaining stat queries and stat tables like for pids, DLM.
 * Create html pages for the summary, stats, everything instead of writing plain
@@ -283,7 +279,7 @@ if __name__ == "__main__":
         lines = get_data_from_file(cmdline_opts.path_to_src_file)
 
         #All the snapshots for all the filesystems.
-        snapshots = []
+        snapshots_by_filesystem = {}
         # The glock that will have a container for all the lines associated with
         # the glock.
         gfs2_snapshot = None
@@ -299,86 +295,114 @@ if __name__ == "__main__":
                     if ((not cmdline_opts.gfs2_filesystem_names) or
                         (gfs2_snapshot.get_filesystem_name().strip() in cmdline_opts.gfs2_filesystem_names)):
                         process_gfs2_snapshot(gfs2_snapshot, snapshot_lines)
-                        snapshots.append(gfs2_snapshot)
+                        if (not snapshots_by_filesystem.has_key(gfs2_snapshot.get_filesystem_name())):
+                            snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()] = []
+                        snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()].append(gfs2_snapshot)
                 # Process the new snapshot
                 gfs2_snapshot = parse_gfs2_snapshot(line, cmdline_opts.ignore_ended_processes)
                 snapshot_lines = []
             else:
                 snapshot_lines.append(line)
+
+
+        # The path to directory where all files written for this host will be
+        # written.
+        path_to_output_dir = cmdline_opts.path_to_output_dir
         # Process any remaining items
         if (not gfs2_snapshot == None):
             if ((not cmdline_opts.gfs2_filesystem_names) or
                 (gfs2_snapshot.get_filesystem_name().strip() in cmdline_opts.gfs2_filesystem_names)):
                 process_gfs2_snapshot(gfs2_snapshot, snapshot_lines)
-                snapshots.append(gfs2_snapshot)
+                if (not snapshots_by_filesystem.has_key(gfs2_snapshot.get_filesystem_name())):
+                    snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()] = []
+                snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()].append(gfs2_snapshot)
+                # Set the path to output dir to include hostname in last item processed.
+                path_to_output_dir = os.path.join(cmdline_opts.path_to_output_dir, gfs2_snapshot.get_hostname())
+        message ="The analyzing of the file is complete."
+        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
 
         # #######################################################################
         # Analyze the data
         # #######################################################################
-        # Print summary of data analyzed
         glocktop_summary_console = ""
         glocktop_summary_file = ""
         hostname = ""
-        for snapshot in snapshots:
-            hostname = snapshot.get_hostname()
-            current_summary = ""
-            glocks = []
-            if (cmdline_opts.glock_inode):
-                # Find particular glocks.
-                glocks = snapshot.find_glock(cmdline_opts.glock_type, cmdline_opts.glock_inode.replace("0x", ""))
-            else:
-                glocks = snapshot.get_glocks()
+        for filesystem_name in snapshots_by_filesystem.keys():
+            snapshots = snapshots_by_filesystem.get(filesystem_name)
+            for snapshot in snapshots:
+                hostname = snapshot.get_hostname()
+                current_summary = ""
+                glocks = []
+                if (cmdline_opts.glock_inode):
+                    # Find particular glocks.
+                    glocks = snapshot.find_glock(cmdline_opts.glock_type, cmdline_opts.glock_inode.replace("0x", ""))
+                else:
+                    glocks = snapshot.get_glocks()
 
-            for glock in glocks:
-                glock_holders = glock.get_holders()
-                if (len(glock_holders) >= cmdline_opts.minimum_waiter_count):
-                    current_summary += "  %s\n" %(glock)
-                    if (not cmdline_opts.disable_show_waiters):
-                        for holder in glock_holders:
-                            current_summary += "    %s\n" %(holder)
-                        if (not glock.get_glock_object() == None):
-                            current_summary += "    %s\n" %(glock.get_glock_object())
-            if (current_summary):
-                glocktop_summary_console += "%s\n%s\n" %(ColorizeConsoleText.red(str(snapshot)), current_summary)
-                glocktop_summary_file += "%s\n%s\n" %(str(snapshot), current_summary)
+                for glock in glocks:
+                    glock_holders = glock.get_holders()
+                    if (len(glock_holders) >= cmdline_opts.minimum_waiter_count):
+                        current_summary += "  %s\n" %(glock)
+                        if (not cmdline_opts.disable_show_waiters):
+                            for holder in glock_holders:
+                                current_summary += "    %s\n" %(holder)
+                            if (not glock.get_glock_object() == None):
+                                current_summary += "    %s\n" %(glock.get_glock_object())
+                    if (current_summary):
+                        glocktop_summary_console += "%s\n%s\n" %(ColorizeConsoleText.red(str(snapshot)), current_summary)
+                        glocktop_summary_file += "%s\n%s\n" %(str(snapshot), current_summary)
 
-        print "%s\n" %(glocktop_summary_console.rstrip())
-        # The path to directory where all files written for this host will be
-        # written.
-        path_to_output_dir = os.path.join(cmdline_opts.path_to_output_dir, hostname)
-
-        path_to_glocktop_summary_file = os.path.join(path_to_output_dir, "glocktop_summary.txt")
-        if (not write_to_file(path_to_glocktop_summary_file, glocktop_summary_file,
-                              append_to_file=False, create_file=True)):
-            message = "An error occurred writing the glocktop summary file: %s" %(path_to_glocktop_summary_file)
-            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
+            if (glocktop_summary_console):
+                print "%s\n" %(glocktop_summary_console.rstrip())
+            path_to_output_file = os.path.join(os.path.join(path_to_output_dir, filesystem_name), "glocktop_summary.txt")
+            if (not write_to_file(path_to_output_file, glocktop_summary_file,
+                                  append_to_file=False, create_file=True)):
+                message = "An error occurred writing the glocktop summary file: %s" %(path_to_glocktop_summary_file)
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
 
         # #######################################################################
         # Gather, print, and graph  stats
         # #######################################################################
         if (not cmdline_opts.disable_stats):
-            # Print or write data gathered from the lines that started with "S"
-            # for peroidic glock stats.
+
+
+
+            # See if way to make this work like a plugin instead of having to import
+            # then run. Just run them all like sos. 
+
 
             from glocktop_analyze.stats.glocks_stats import GSStats
             from glocktop_analyze.stats.filesystems import Filesystems
             from glocktop_analyze.stats.glocks_high_demote_seconds import GlocksHighDemoteSeconds
+            from glocktop_analyze.stats.glocks_in_snapshots import GlocksInSnapshots
 
-            gsstats_stats = GSStats(snapshots, "Glocks Stats")
-            gsstats_stats.analyze()
-            gsstats_stats.console()
-            gsstats_stats.write(path_to_output_dir)
+            for filesystem_name in snapshots_by_filesystem.keys():
+                snapshots = snapshots_by_filesystem.get(filesystem_name)
+                gsstats_stats = GSStats(snapshots)
+                gsstats_stats.analyze()
+                gsstats_stats.console()
+                gsstats_stats.write(path_to_output_dir)
 
-            filesystems_stats = Filesystems(snapshots, "Filesystem Stats")
-            filesystems_stats.analyze()
-            filesystems_stats.console()
-            filesystems_stats.write(path_to_output_dir)
+                filesystems_stats = Filesystems(snapshots)
+                filesystems_stats.analyze()
+                filesystems_stats.console()
+                filesystems_stats.write(path_to_output_dir)
 
-            glocks_high_demote_secs_stats = GlocksHighDemoteSeconds(snapshots, "Glocks with High Demote Seconds")
-            glocks_high_demote_secs_stats.analyze()
-            glocks_high_demote_secs_stats.console()
-            glocks_high_demote_secs_stats.write(path_to_output_dir)
+                glocks_high_demote_secs_stats = GlocksHighDemoteSeconds(snapshots)
+                glocks_high_demote_secs_stats.analyze()
+                glocks_high_demote_secs_stats.console()
+                glocks_high_demote_secs_stats.write(path_to_output_dir)
 
+                glocks_in_snapshots_stats = GlocksInSnapshots(snapshots)
+                glocks_in_snapshots_stats.analyze()
+                glocks_in_snapshots_stats.console()
+                glocks_in_snapshots_stats.write(path_to_output_dir)
+
+        # #######################################################################
+        # Create graphs
+        # #######################################################################
+        """
+        try:
             # Do various stats on the snapshots.
             #
             # The number of times that a glock appear in a snapshot for a
@@ -405,27 +429,7 @@ if __name__ == "__main__":
                         glocks_appeared_in_snapshots[glock_type_inode] = 1
                         dt_holder_waiter_count = (snapshot.get_date_time(), len(glock.get_holders()))
                         glocks_holder_waiters_by_date[glock_type_inode] = [dt_holder_waiter_count]
-            # Print glock stats
-            path_to_glocktop_stats_file = os.path.join(path_to_output_dir, "glocktop_stats.txt")
-            table = []
-            for pair in sorted(glocks_appeared_in_snapshots.items(), key=itemgetter(1), reverse=True):
-                # Only include if there is more than one waiter.
-                if (pair[1] > 1):
-                    table.append([pair[0].rsplit("-")[0], pair[0].rsplit("-")[1], pair[1]])
-            ftable = tableize(table, ["Filesystem Name", "Glock Type/Glocks Inode", "Found in snapshot"])
-            if (len(ftable) > 0):
-                print ftable
-            ftable = tableize(table, ["Filesystem Name", "Glock Type/Glocks Inode", "Found in snapshots"], colorize=False)
-            if (len(ftable) > 0):
-                if (not write_to_file(path_to_glocktop_stats_file, "%s \n" %(ftable),
-                                      append_to_file=True, create_file=True)):
-                    message = "An error occurred writing the glocktop stats file: %s" %(path_to_glocktop_stats_file)
-                    logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
 
-        # #######################################################################
-        # Create graphs
-        # #######################################################################
-        try:
             # svg does better charts. png support requires the python files:
             # lxml, cairosvg, tinycss, cssselect
             enable_png_format=False
@@ -434,6 +438,12 @@ if __name__ == "__main__":
                 message = "The graphs for the glocks stats will be generated."
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
                 # Sort all the snapshots into filesystem bins.
+
+
+
+               # DONT NEED TO SORT BY FILESYSTEMS ANY LONGER.
+
+
                 snapshots_by_filesystem = {}
                 for snapshot in snapshots:
                     glocks_stats = snapshot.get_glocks_stats()
@@ -508,7 +518,7 @@ if __name__ == "__main__":
         except AttributeError:
             # Graphing must be disabled since option does not exists.
             pass
-
+        """
     except KeyboardInterrupt:
         print ""
         message =  "This script will exit since control-c was executed by end user."
