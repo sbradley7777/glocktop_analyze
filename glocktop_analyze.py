@@ -77,9 +77,9 @@ from glocktop_analyze.glock import Glock, GlockHolder, GlockObject
 from glocktop_analyze.glocks_stats import GlocksStats, GlockStat
 from glocktop_analyze.parsers.gfs2_snapshot import parse_gfs2_snapshot, process_gfs2_snapshot
 
-from glocktop_analyze.graphs import generate_graphs_by_glock_type, generate_graphs_by_glock_state
-from glocktop_analyze.graphs import generate_graphs_glocks_holder_waiter
-from glocktop_analyze.graphs import generate_bar_graphs, generate_graph_index_page
+from glocktop_analyze.stats import generate_graphs_by_glock_type, generate_graphs_by_glock_state
+from glocktop_analyze.stats import generate_graphs_glocks_holder_waiter
+from glocktop_analyze.stats import generate_bar_graphs, generate_graph_index_page
 
 # #####################################################################
 # Global vars:
