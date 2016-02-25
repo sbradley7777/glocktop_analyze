@@ -81,6 +81,7 @@ from glocktop_analyze.stats import generate_graphs_by_glock_type, generate_graph
 from glocktop_analyze.stats import generate_graphs_glocks_holder_waiter
 from glocktop_analyze.stats import generate_bar_graphs, generate_graph_index_page
 
+
 # #####################################################################
 # Global vars:
 # #####################################################################
@@ -358,43 +359,31 @@ if __name__ == "__main__":
         if (not cmdline_opts.disable_stats):
             # Print or write data gathered from the lines that started with "S"
             # for peroidic glock stats.
-            summary_glocks_stats_console = ""
-            summary_glocks_stats_file_map = {}
-            for snapshot in snapshots:
-                glocks_stats = snapshot.get_glocks_stats()
-                if (not glocks_stats == None):
-                    filesystem_name = glocks_stats.get_filesystem_name()
-                    if (not summary_glocks_stats_file_map.has_key(filesystem_name)):
-                        summary_glocks_stats_file_map[filesystem_name] = ""
-                    summary_glocks_stats_file = "Glock stats at %s for filesystem: %s\n%s\n\n" %(glocks_stats.get_date_time().strftime("%Y-%m-%d %H:%M:%S"),
-                                                                                                 glocks_stats.get_filesystem_name(), str(glocks_stats))
-                    summary_glocks_stats_file_map[filesystem_name] += summary_glocks_stats_file
 
+            from glocktop_analyze.stats.glocks_stats import GSStats
+            from glocktop_analyze.stats.filesystems import Filesystems
+            from glocktop_analyze.stats.glocks_high_demote_seconds import GlocksHighDemoteSeconds
 
+            gsstats_stats = GSStats(snapshots, "Glocks Stats")
+            gsstats_stats.analyze()
+            gsstats_stats.console()
+            gsstats_stats.write(path_to_output_dir)
 
-                    formatted_table = tableize(glocks_stats.get_table(), ["Glock States"] + glocktop_analyze.glocks_stats.GLOCK_STATES, colorize=True).rstrip()
-                    summary_glocks_stats_console += "Glock stats at %s for filesystem: %s\n%s\n\n" %(ColorizeConsoleText.orange(glocks_stats.get_date_time().strftime("%Y-%m-%d %H:%M:%S")),
-                                                                                                     ColorizeConsoleText.orange(glocks_stats.get_filesystem_name()), formatted_table)
+            filesystems_stats = Filesystems(snapshots, "Filesystem Stats")
+            filesystems_stats.analyze()
+            filesystems_stats.console()
+            filesystems_stats.write(path_to_output_dir)
 
-            if (summary_glocks_stats_console):
-                print summary_glocks_stats_console
-            if (summary_glocks_stats_file):
-                for filesystem_name in summary_glocks_stats_file_map.keys():
-                    path_to_glocktop_glocks_stats_file = os.path.join(os.path.join(path_to_output_dir, filesystem_name), "glocks_stats.txt")
-                    if (not write_to_file(path_to_glocktop_glocks_stats_file, summary_glocks_stats_file_map.get(filesystem_name),
-                                          append_to_file=False, create_file=True)):
-                        message = "An error occurred writing the glocks stats to the file: %s" %(path_to_glocktop_glocks_stats_file)
-                        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+            glocks_high_demote_secs_stats = GlocksHighDemoteSeconds(snapshots, "Glocks with High Demote Seconds")
+            glocks_high_demote_secs_stats.analyze()
+            glocks_high_demote_secs_stats.console()
+            glocks_high_demote_secs_stats.write(path_to_output_dir)
 
             # Do various stats on the snapshots.
             #
-            # The number of snapshots taken for each filesystem.
-            filesystem_count = {}
             # The number of times that a glock appear in a snapshot for a
             # filesystem.
             glocks_appeared_in_snapshots = {}
-            # The value of demote_seconds if greater than zero for a glocks.
-            glock_high_demote_seconds = {}
             # The number of holders and waiters including the time taken for
             # each snapshot it appeared in.
             glocks_holder_waiters_by_date = {}
@@ -404,14 +393,6 @@ if __name__ == "__main__":
             # info could be parsed out.
             for snapshot in snapshots:
                 filesystem_name = snapshot.get_filesystem_name()
-                # Get filesystem stats
-                if (filesystem_count.has_key(filesystem_name)):
-                    filesystem_count[filesystem_name]["end_time"] = str(snapshot.get_date_time())
-                    filesystem_count[filesystem_name]["count"] = filesystem_count[filesystem_name].get("count") + 1
-                else:
-                    filesystem_count[filesystem_name] = {"name": filesystem_name, "count":1,
-                                                         "start_time":str(snapshot.get_date_time()),
-                                                         "end_time":str(snapshot.get_date_time())}
                 # Get glock stats
                 for glock in snapshot.get_glocks():
                     # Unique key <filename_name>-<glock_type>/<glock_inode>
@@ -424,33 +405,8 @@ if __name__ == "__main__":
                         glocks_appeared_in_snapshots[glock_type_inode] = 1
                         dt_holder_waiter_count = (snapshot.get_date_time(), len(glock.get_holders()))
                         glocks_holder_waiters_by_date[glock_type_inode] = [dt_holder_waiter_count]
-                    demote_time = int(glock.get_demote_time())
-                    if (demote_time > 0):
-                        if (glock_high_demote_seconds.has_key(glock_type_inode)):
-                            c_demote_time = glock_high_demote_seconds.get(glock_type_inode)
-                            c_demote_time += " %d" %(demote_time)
-                            glock_high_demote_seconds[glock_type_inode] = c_demote_time
-                        else:
-                            glock_high_demote_seconds[glock_type_inode] = "%s" %(demote_time)
-
-            # Print filesystem stats
-            path_to_glocktop_stats_file = os.path.join(path_to_output_dir, "glocktop_stats.txt")
-            table = []
-            for key in filesystem_count.keys():
-                #date_time = filesystem_count.get(key).get_date_time()
-                table.append([filesystem_count.get(key).get("name"), filesystem_count.get(key).get("count"),
-                              filesystem_count.get(key).get("start_time"), filesystem_count.get(key).get("end_time")])
-            ftable = tableize(table, ["Filesystem", "Snapshots", "Start Time", "End Time"])
-            if (len(ftable) > 0):
-                print ftable
-            ftable = tableize(table, ["Filesystem", "Snapshots", "Start Time", "End Time"], colorize=False)
-            if (len(ftable) > 0):
-                if (not write_to_file(path_to_glocktop_stats_file, "%s \n" %(ftable),
-                                      append_to_file=False, create_file=True)):
-                    message = "An error occurred writing the glocktop stats file: %s" %(path_to_glocktop_stats_file)
-                    logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
-
             # Print glock stats
+            path_to_glocktop_stats_file = os.path.join(path_to_output_dir, "glocktop_stats.txt")
             table = []
             for pair in sorted(glocks_appeared_in_snapshots.items(), key=itemgetter(1), reverse=True):
                 # Only include if there is more than one waiter.
@@ -460,33 +416,6 @@ if __name__ == "__main__":
             if (len(ftable) > 0):
                 print ftable
             ftable = tableize(table, ["Filesystem Name", "Glock Type/Glocks Inode", "Found in snapshots"], colorize=False)
-            if (len(ftable) > 0):
-                if (not write_to_file(path_to_glocktop_stats_file, "%s \n" %(ftable),
-                                      append_to_file=True, create_file=True)):
-                    message = "An error occurred writing the glocktop stats file: %s" %(path_to_glocktop_stats_file)
-                    logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
-
-            # Glock + filesystem with high demote seconds.
-            table = []
-            for key in glock_high_demote_seconds.keys():
-                demote_seconds = glock_high_demote_seconds.get(key).split()
-                index = 0
-                current_fs_name = key.rsplit("-")[0]
-                current_glock =  key.rsplit("-")[1]
-                current_demo_seconds = ""
-                for index in range(0, len(demote_seconds)):
-                    if (((index % 7) == 0) and (not index == 0)):
-                        table.append([current_fs_name, current_glock, current_demo_seconds.strip()])
-                        current_fs_name = "-"
-                        current_glock = "-"
-                        current_demo_seconds = demote_seconds[index]
-                    else:
-                        current_demo_seconds += " %s" %(demote_seconds[index])
-
-            ftable = tableize(table, ["Filesystem Name","Glock Type/Glocks Inode", "High Demote Seconds That Occurred (in ms)"])
-            if (len(ftable) > 0):
-                print ftable
-            ftable = tableize(table, ["Filesystem Name","Glock Type/Glocks Inode", "High Demote Seconds That Occurred (in ms)"], colorize=False)
             if (len(ftable) > 0):
                 if (not write_to_file(path_to_glocktop_stats_file, "%s \n" %(ftable),
                                       append_to_file=True, create_file=True)):

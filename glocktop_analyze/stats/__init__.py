@@ -21,6 +21,31 @@ except (ImportError, NameError):
     message = "Failed to import pygal. The python-pygal package needs to be installed."
     logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
 
+
+class Stats(object):
+    def __init__(self, snapshots, title):
+        self.__snapshots = snapshots
+        self.__title = title
+
+    def get_snapshots(self):
+        return self.__snapshots
+
+    def get_title(self):
+        return self.__title
+
+    def analayze(self):
+        pass
+
+    def console(self):
+        pass
+
+    def write(self, path_to_output_dir):
+        pass
+
+    def graph(self, path_to_output_dir):
+        pass
+
+
 def generate_graphs_by_glock_type(path_to_output_dir, snapshots, format_png=False):
     if (snapshots):
         path_to_image_files = []
