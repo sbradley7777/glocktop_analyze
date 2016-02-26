@@ -8,8 +8,8 @@ from glocktop_analyze.stats import Stats
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
 
 class GlocksHighDemoteSeconds(Stats):
-    def __init__(self, snapshots):
-        Stats.__init__(self, snapshots, "Glocks with High Demote Seconds")
+    def __init__(self, snapshots, path_to_output_dir):
+        Stats.__init__(self, snapshots, "Glocks with High Demote Seconds", path_to_output_dir)
         self.__glocks_high_demote_seconds = {}
 
 
@@ -57,13 +57,14 @@ class GlocksHighDemoteSeconds(Stats):
             table += self.__tableify(hashkey, self.__glocks_high_demote_seconds.get(hashkey))
         print tableize(table,["Filesystem", "Snapshots", "Demote Seconds"])
 
-    def write(self, path_to_output_dir):
+    def write(self):
         table = []
         for hashkey in self.__glocks_high_demote_seconds.keys():
             table += self.__tableify(hashkey, self.__glocks_high_demote_seconds.get(hashkey))
         ftable = tableize(table,["Filesystem", "Snapshots", "Demote Seconds"], colorize=False)
         filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
-        path_to_output_file = os.path.join(os.path.join(path_to_output_dir, self.get_filesystem_name()), filename)
+        path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+                                                        self.get_filesystem_name()), filename)
         if (not write_to_file(path_to_output_file, ftable, append_to_file=False, create_file=True)):
             message = "An error occurred writing the glocks stats to the file: %s" %(path_to_output_file)
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)

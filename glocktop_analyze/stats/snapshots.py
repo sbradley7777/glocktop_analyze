@@ -8,8 +8,8 @@ from glocktop_analyze.stats import Stats
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
 
 class Snapshots(Stats):
-    def __init__(self, snapshots):
-        Stats.__init__(self, snapshots, "Filesystem Stats")
+    def __init__(self, snapshots, path_to_output_dir):
+        Stats.__init__(self, snapshots, "Filesystem Stats", path_to_output_dir)
         self.__count = 0
         self.__start_time = None
         self.__stop_time = None
@@ -26,11 +26,12 @@ class Snapshots(Stats):
                        ["Filesystem", "Snapshots", "Start Time", "Stop Time"])
 
 
-    def write(self, path_to_output_dir):
+    def write(self):
         ftable = tableize([[self.get_filesystem_name(), str(self.__count), self.__start_time, self.__stop_time]],
                           ["Filesystem", "Snapshots", "Start Time", "Stop Time"])
         filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
-        path_to_output_file = os.path.join(os.path.join(path_to_output_dir, self.get_filesystem_name()), filename)
+        path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+                                                        self.get_filesystem_name()), filename)
         if (not write_to_file(path_to_output_file, ftable, append_to_file=False, create_file=True)):
             message = "An error occurred writing the glocks stats to the file: %s" %(path_to_output_file)
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)

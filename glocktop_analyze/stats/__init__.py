@@ -21,18 +21,24 @@ except (ImportError, NameError):
     message = "Failed to import pygal. The python-pygal package needs to be installed."
     logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
 
-
+# #######################################################################
+# Classes
+# #######################################################################
 class Stats(object):
-    def __init__(self, snapshots, title):
+    def __init__(self, snapshots, title, path_to_output_dir):
         # A list of snapshots of a particular filesystem.
         self.__snapshots = snapshots
         self.__title = title
+        self.__path_to_output_dir = path_to_output_dir
 
     def get_snapshots(self):
         return self.__snapshots
 
     def get_title(self):
         return self.__title
+
+    def get_path_to_output_dir(self):
+        return self.__path_to_output_dir
 
     def get_filesystem_name(self):
         if (self.__snapshots):
@@ -51,7 +57,9 @@ class Stats(object):
     def graph(self, path_to_output_dir, enable_png_format):
         pass
 
-
+# #######################################################################
+# Functions
+# #######################################################################
 def generate_date_graphs(path_to_output_dir, x_axis, y_axis_map, title, x_axis_title, y_axis_title, format_png=False):
     gstyle = Style(
         # http://www.pygal.org/en/latest/documentation/custom_styles.html

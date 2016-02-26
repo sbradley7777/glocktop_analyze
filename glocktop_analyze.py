@@ -374,35 +374,35 @@ if __name__ == "__main__":
         # because the require packages are not installed.
         for filesystem_name in snapshots_by_filesystem.keys():
             snapshots = snapshots_by_filesystem.get(filesystem_name)
-            gsstats_stats = GSStats(snapshots)
+            gsstats_stats = GSStats(snapshots, path_to_output_dir)
             gsstats_stats.analyze()
             gsstats_stats.console()
-            gsstats_stats.write(path_to_output_dir)
+            gsstats_stats.write()
             try:
                 if (not cmdline_opts.disable_graphs):
-                    gsstats_stats.graph(path_to_output_dir, enable_png_format)
+                    gsstats_stats.graph(enable_png_format)
             except AttributeError:
                 pass
-            snapshots_stats = Snapshots(snapshots)
+            snapshots_stats = Snapshots(snapshots, path_to_output_dir)
             snapshots_stats.analyze()
             snapshots_stats.console()
-            snapshots_stats.write(path_to_output_dir)
+            snapshots_stats.write()
 
-            glocks_high_demote_secs_stats = GlocksHighDemoteSeconds(snapshots)
+            glocks_high_demote_secs_stats = GlocksHighDemoteSeconds(snapshots, path_to_output_dir)
             glocks_high_demote_secs_stats.analyze()
             glocks_high_demote_secs_stats.console()
-            glocks_high_demote_secs_stats.write(path_to_output_dir)
+            glocks_high_demote_secs_stats.write()
 
-            glocks_in_snapshots_stats = GlocksInSnapshots(snapshots)
+            glocks_in_snapshots_stats = GlocksInSnapshots(snapshots, path_to_output_dir)
             glocks_in_snapshots_stats.analyze()
             glocks_in_snapshots_stats.console()
-            glocks_in_snapshots_stats.write(path_to_output_dir)
+            glocks_in_snapshots_stats.write()
 
             try:
                 if (not cmdline_opts.disable_graphs):
-                    glocks_waiters_time = GlocksWaitersTime(snapshots)
+                    glocks_waiters_time = GlocksWaitersTime(snapshots, path_to_output_dir)
                     glocks_waiters_time.analyze()
-                    glocks_waiters_time.graph(path_to_output_dir, enable_png_format)
+                    glocks_waiters_time.graph(enable_png_format)
             except AttributeError:
                 pass
     except KeyboardInterrupt:
