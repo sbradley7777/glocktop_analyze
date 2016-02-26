@@ -7,7 +7,7 @@ import glocktop_analyze
 from glocktop_analyze.stats import Stats
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
 
-class Filesystems(Stats):
+class Snapshots(Stats):
     def __init__(self, snapshots):
         Stats.__init__(self, snapshots, "Filesystem Stats")
         self.__count = 0

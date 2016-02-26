@@ -358,7 +358,7 @@ if __name__ == "__main__":
         # Gather, print, and graph  stats
         # #######################################################################
         from glocktop_analyze.stats.glocks_stats import GSStats
-        from glocktop_analyze.stats.filesystems import Filesystems
+        from glocktop_analyze.stats.snapshots import Snapshots
         from glocktop_analyze.stats.glocks_high_demote_seconds import GlocksHighDemoteSeconds
         from glocktop_analyze.stats.glocks_in_snapshots import GlocksInSnapshots
         from glocktop_analyze.stats.glocks_waiters_time import GlocksWaitersTime
@@ -383,10 +383,10 @@ if __name__ == "__main__":
                     gsstats_stats.graph(path_to_output_dir, enable_png_format)
             except AttributeError:
                 pass
-            filesystems_stats = Filesystems(snapshots)
-            filesystems_stats.analyze()
-            filesystems_stats.console()
-            filesystems_stats.write(path_to_output_dir)
+            snapshots_stats = Snapshots(snapshots)
+            snapshots_stats.analyze()
+            snapshots_stats.console()
+            snapshots_stats.write(path_to_output_dir)
 
             glocks_high_demote_secs_stats = GlocksHighDemoteSeconds(snapshots)
             glocks_high_demote_secs_stats.analyze()
