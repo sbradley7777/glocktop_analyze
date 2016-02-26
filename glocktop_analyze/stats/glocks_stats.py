@@ -98,7 +98,9 @@ class GSStats(Stats):
         path_to_graphs_dir = os.path.join(os.path.join(path_to_output_dir, self.get_filesystem_name()), "graphs")
         path_to_image_files = self.__generate_graphs_by_glock_type(path_to_graphs_dir, format_png=enable_png_format)
         if (path_to_image_files):
-            generate_graph_index_page(path_to_output_dir, path_to_image_files, "Glock Types")
+            generate_graph_index_page(os.path.join(path_to_output_dir, self.get_filesystem_name()),
+                                      path_to_image_files, "Glock Types")
         path_to_image_files = self.__generate_graphs_by_glock_state(path_to_graphs_dir, format_png=enable_png_format)
         if (path_to_image_files):
-            generate_graph_index_page(path_to_output_dir, path_to_image_files, "Glock States")
+            generate_graph_index_page(os.path.join(path_to_output_dir, self.get_filesystem_name()),
+                                      path_to_image_files, "Glock States")

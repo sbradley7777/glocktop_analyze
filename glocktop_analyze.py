@@ -56,8 +56,6 @@ import logging.handlers
 import os
 import os.path
 from optparse import OptionParser, Option, SUPPRESS_HELP
-from operator import itemgetter
-from collections import OrderedDict
 
 import glocktop_analyze
 from glocktop_analyze.utilities import LogWriter
