@@ -9,7 +9,7 @@ from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, table
 
 class Snapshots(Stats):
     def __init__(self, snapshots, path_to_output_dir):
-        Stats.__init__(self, snapshots, "Filesystem Stats", path_to_output_dir)
+        Stats.__init__(self, snapshots, "Snapshot Stats", path_to_output_dir)
         self.__count = 0
         self.__start_time = None
         self.__stop_time = None
