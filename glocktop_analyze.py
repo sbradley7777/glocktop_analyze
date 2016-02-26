@@ -19,7 +19,7 @@ Current TODO:
   subset of data if data has over 100 or 200 snapshots. 8000 graph points takes forever
   * 10.
 * Do i need to set as global var or some option for the var: max_glocks_to_graph
-
+* Do the same automatic disable of png support if the png packages not installed.
 
 RFEs:
 * Add remaining stat queries and stat tables like for pids, DLM.
@@ -72,11 +72,6 @@ from glocktop_analyze.gfs2_snapshot import GFS2Snapshot, DLMActivity
 from glocktop_analyze.glock import Glock, GlockHolder, GlockObject
 from glocktop_analyze.glocks_stats import GlocksStats, GlockStat
 from glocktop_analyze.parsers.gfs2_snapshot import parse_gfs2_snapshot, process_gfs2_snapshot
-
-from glocktop_analyze.stats import generate_graphs_by_glock_type, generate_graphs_by_glock_state
-from glocktop_analyze.stats import generate_graphs_glocks_holder_waiter
-from glocktop_analyze.stats import generate_bar_graphs, generate_graph_index_page
-
 
 # #####################################################################
 # Global vars:
@@ -141,11 +136,12 @@ def __get_options(version) :
                           dest="disable_show_waiters",
                           help="the waiters for the glocks are not displayed in the output",
                           default=False)
-    cmd_parser.add_option("-S", "--disable_stats",
-                          action="store_true",
-                          dest="disable_stats",
-                          help="do not print stats",
-                          default=False)
+    # I think stats should have option to enable or disable.
+    #cmd_parser.add_option("-S", "--disable_stats",
+    #                      action="store_true",
+    #                      dest="disable_stats",
+    #                      help="do not print stats",
+    #                      default=False)
     #cmd_parser.add_option("-C", "--disable_call_trace",
     #                      action="store_true",
     #                      dest="disable_call_trace",
@@ -363,162 +359,54 @@ if __name__ == "__main__":
         # #######################################################################
         # Gather, print, and graph  stats
         # #######################################################################
-        if (not cmdline_opts.disable_stats):
+        from glocktop_analyze.stats.glocks_stats import GSStats
+        from glocktop_analyze.stats.filesystems import Filesystems
+        from glocktop_analyze.stats.glocks_high_demote_seconds import GlocksHighDemoteSeconds
+        from glocktop_analyze.stats.glocks_in_snapshots import GlocksInSnapshots
+        from glocktop_analyze.stats.glocks_waiters_time import GlocksWaitersTime
 
+        # svg does better charts. png support requires the python files:
+        # lxml, cairosvg, tinycss, cssselect
+        enable_png_format=False
 
+        # See if way to make this work like a plugin instead of having to import
+        # then run. Just run them all like sos.
 
-            # See if way to make this work like a plugin instead of having to import
-            # then run. Just run them all like sos. 
+        # Attribute error is thrown and silently caught if graphing is disable
+        # because the require packages are not installed.
+        for filesystem_name in snapshots_by_filesystem.keys():
+            snapshots = snapshots_by_filesystem.get(filesystem_name)
+            gsstats_stats = GSStats(snapshots)
+            gsstats_stats.analyze()
+            gsstats_stats.console()
+            gsstats_stats.write(path_to_output_dir)
+            try:
+                if (not cmdline_opts.disable_graphs):
+                    gsstats_stats.graph(path_to_output_dir, enable_png_format)
+            except AttributeError:
+                pass
+            filesystems_stats = Filesystems(snapshots)
+            filesystems_stats.analyze()
+            filesystems_stats.console()
+            filesystems_stats.write(path_to_output_dir)
 
+            glocks_high_demote_secs_stats = GlocksHighDemoteSeconds(snapshots)
+            glocks_high_demote_secs_stats.analyze()
+            glocks_high_demote_secs_stats.console()
+            glocks_high_demote_secs_stats.write(path_to_output_dir)
 
-            from glocktop_analyze.stats.glocks_stats import GSStats
-            from glocktop_analyze.stats.filesystems import Filesystems
-            from glocktop_analyze.stats.glocks_high_demote_seconds import GlocksHighDemoteSeconds
-            from glocktop_analyze.stats.glocks_in_snapshots import GlocksInSnapshots
+            glocks_in_snapshots_stats = GlocksInSnapshots(snapshots)
+            glocks_in_snapshots_stats.analyze()
+            glocks_in_snapshots_stats.console()
+            glocks_in_snapshots_stats.write(path_to_output_dir)
 
-            for filesystem_name in snapshots_by_filesystem.keys():
-                snapshots = snapshots_by_filesystem.get(filesystem_name)
-                gsstats_stats = GSStats(snapshots)
-                gsstats_stats.analyze()
-                gsstats_stats.console()
-                gsstats_stats.write(path_to_output_dir)
-
-                filesystems_stats = Filesystems(snapshots)
-                filesystems_stats.analyze()
-                filesystems_stats.console()
-                filesystems_stats.write(path_to_output_dir)
-
-                glocks_high_demote_secs_stats = GlocksHighDemoteSeconds(snapshots)
-                glocks_high_demote_secs_stats.analyze()
-                glocks_high_demote_secs_stats.console()
-                glocks_high_demote_secs_stats.write(path_to_output_dir)
-
-                glocks_in_snapshots_stats = GlocksInSnapshots(snapshots)
-                glocks_in_snapshots_stats.analyze()
-                glocks_in_snapshots_stats.console()
-                glocks_in_snapshots_stats.write(path_to_output_dir)
-
-        # #######################################################################
-        # Create graphs
-        # #######################################################################
-        """
-        try:
-            # Do various stats on the snapshots.
-            #
-            # The number of times that a glock appear in a snapshot for a
-            # filesystem.
-            glocks_appeared_in_snapshots = {}
-            # The number of holders and waiters including the time taken for
-            # each snapshot it appeared in.
-            glocks_holder_waiters_by_date = {}
-            # In some instances the unique key will be
-            # "filesystem_name-glock_type/glock_inode". For example:
-            # gfs2payroll-4/42ff2. Then for printing the filesystem and glock
-            # info could be parsed out.
-            for snapshot in snapshots:
-                filesystem_name = snapshot.get_filesystem_name()
-                # Get glock stats
-                for glock in snapshot.get_glocks():
-                    # Unique key <filename_name>-<glock_type>/<glock_inode>
-                    glock_type_inode = "%s-%s/%s" %(filesystem_name, glock.get_type(), glock.get_inode())
-                    if (glocks_appeared_in_snapshots.has_key(glock_type_inode)):
-                        glocks_appeared_in_snapshots[glock_type_inode] = glocks_appeared_in_snapshots.get(glock_type_inode) + 1
-                        dt_holder_waiter_count = (snapshot.get_date_time(), len(glock.get_holders()))
-                        glocks_holder_waiters_by_date[glock_type_inode] += [dt_holder_waiter_count]
-                    else:
-                        glocks_appeared_in_snapshots[glock_type_inode] = 1
-                        dt_holder_waiter_count = (snapshot.get_date_time(), len(glock.get_holders()))
-                        glocks_holder_waiters_by_date[glock_type_inode] = [dt_holder_waiter_count]
-
-            # svg does better charts. png support requires the python files:
-            # lxml, cairosvg, tinycss, cssselect
-            enable_png_format=False
-            if (not cmdline_opts.disable_graphs):
-                # Graph the glocks stats and glock types
-                message = "The graphs for the glocks stats will be generated."
-                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
-                # Sort all the snapshots into filesystem bins.
-
-
-
-               # DONT NEED TO SORT BY FILESYSTEMS ANY LONGER.
-
-
-                snapshots_by_filesystem = {}
-                for snapshot in snapshots:
-                    glocks_stats = snapshot.get_glocks_stats()
-                    if (not glocks_stats == None):
-                        if (snapshots_by_filesystem.has_key(snapshot.get_filesystem_name())):
-                            snapshots_by_filesystem[snapshot.get_filesystem_name()].append(snapshot)
-                        else:
-                            snapshots_by_filesystem[snapshot.get_filesystem_name()] = [snapshot]
-                for filesystem_name in snapshots_by_filesystem:
-                    generate_graphs_by_glock_type(os.path.join(path_to_output_dir, filesystem_name),
-                                                  snapshots_by_filesystem.get(filesystem_name),
-                                                  format_png=enable_png_format)
-                for filesystem_name in snapshots_by_filesystem:
-                    generate_graphs_by_glock_state(os.path.join(path_to_output_dir, filesystem_name),
-                                                   snapshots_by_filesystem.get(filesystem_name),
-                                                   format_png=enable_png_format)
-
-                # Graph the glocks number of holders and waiters over time.
-                message = "Generating the graphs for glock's holder+waiter count over time."
-                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
-                # Get the date/time of all the snapshots bor each filesystems.
-                filesystem_snapshot_dt = {}
-                for snapshot in snapshots:
-                    filesystem_name = snapshot.get_filesystem_name()
-                    # Get filesystem stats
-                    if (filesystem_snapshot_dt.has_key(filesystem_name)):
-                        filesystem_snapshot_dt[filesystem_name].append(snapshot.get_date_time())
-                    else:
-                        filesystem_snapshot_dt[filesystem_name] = [snapshot.get_date_time()]
-
-                glocks_in_snapshots = {}
-                for pair in sorted(glocks_appeared_in_snapshots.items(), key=itemgetter(1), reverse=True):
-                    # Only include if there is more than one waiter.
-                    if (pair[1] > 1):
-                        filesystem_name = pair[0].rsplit("-")[0]
-                        if (not glocks_in_snapshots.has_key(filesystem_name)):
-                            glocks_in_snapshots[filesystem_name] = []
-                            glocks_in_snapshots.get(filesystem_name).append([])
-                            glocks_in_snapshots.get(filesystem_name).append([])
-                        glocks_in_snapshots.get(filesystem_name)[0].append(pair[0].rsplit("-")[1])
-                        glocks_in_snapshots.get(filesystem_name)[1].append(pair[1])
-
-                # Find glocks that had more than one holder+waiters.
-                for filesystem_name in glocks_in_snapshots.keys():
-                    glocks_holder_waiters_counter = {}
-                    for gkey in glocks_holder_waiters_by_date.keys():
-                        hw_count = 0
-                        if (gkey.startswith(filesystem_name)):
-                            for gtuple in glocks_holder_waiters_by_date.get(gkey):
-                                hw_count += gtuple[1]
-                        if (hw_count > 1):
-                            glocks_holder_waiters_counter[gkey] = hw_count
-
-                    # Only graph the top 10 glocks with highest holder+waiter count.
-                    max_glocks_to_graph = 10
-                    glocks_highest_count = {}
-                    index = 1
-                    for t in reversed(OrderedDict(sorted(glocks_holder_waiters_counter.items(), key=lambda t: t[1]))):
-                        if (index > max_glocks_to_graph):
-                            try:
-                                del glocks_holder_waiters_counter[t]
-                            except KeyError:
-                                pass
-                        index += 1
-                    # Map only glocks that had more than 1 holder+waiter so the possible items to graph is lower.
-                    glocks_to_graph = {key.rsplit("-")[1]: glocks_holder_waiters_by_date[key] for key in glocks_holder_waiters_by_date if key in glocks_holder_waiters_counter.keys()}
-                    generate_graphs_glocks_holder_waiter(os.path.join(path_to_output_dir, filesystem_name),
-                                                         glocks_to_graph,
-                                                         filesystem_snapshot_dt[filesystem_name], format_png=enable_png_format)
-                message = "The graphs were to the directory: %s" %(path_to_output_dir)
-                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).info(message)
-        except AttributeError:
-            # Graphing must be disabled since option does not exists.
-            pass
-        """
+            try:
+                if (not cmdline_opts.disable_graphs):
+                    glocks_waiters_time = GlocksWaitersTime(snapshots)
+                    glocks_waiters_time.analyze()
+                    glocks_waiters_time.graph(path_to_output_dir, enable_png_format)
+            except AttributeError:
+                pass
     except KeyboardInterrupt:
         print ""
         message =  "This script will exit since control-c was executed by end user."
