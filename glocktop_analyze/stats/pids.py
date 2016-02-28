@@ -2,6 +2,7 @@
 import logging
 import logging.handlers
 import os.path
+from collections import OrderedDict
 
 import glocktop_analyze
 from glocktop_analyze.stats import Stats
@@ -11,14 +12,72 @@ class Pids(Stats):
     def __init__(self, snapshots, path_to_output_dir):
         Stats.__init__(self, snapshots, "Pids Stats", path_to_output_dir)
 
+        self.__pids_in_snapshots = []
+        self.__pids_using_multiple_glocks = []
+
+    def __encode(self, pid, command):
+        # Not sure what guranteees no duplicates, that command will not be empty
+        # sometimes and not-empty other, etc.
+        return "%s-%s" %(pid, command)
+
+    def __decode(self, hashkey):
+        hashkey_split = hashkey.split("-")
+        return (hashkey_split[0], hashkey_split[1])
+
+
     def analyze(self):
+        # Need to create object to hold the pid, command,
+        pids_in_snapshots = {}
+        pids_to_glocks = {}
         for snapshot in self.get_snapshots():
-            pass
+            for glock in snapshot.get_glocks():
+                glock_type_inode = "%s/%s" %(glock.get_type(), glock.get_inode())
+                for glock_holder in glock.get_holders():
+                    hashkey = self.__encode(glock_holder.get_pid(), glock_holder.get_command())
+                    # Count the times a pid showed up in snapshot.
+                    if (not pids_in_snapshots.has_key(hashkey)):
+                        pids_in_snapshots[hashkey] = 0
+                    pids_in_snapshots[hashkey] += 1
+                    # Map pids and its glocks
+                    if (not pids_to_glocks.has_key(hashkey)):
+                        pids_to_glocks[hashkey] = []
+                    if (not glock_type_inode in pids_to_glocks[hashkey]):
+                        pids_to_glocks[hashkey].append(glock_type_inode)
+        # Create structure for pids showing in snapshots.
+        ordered_dict = OrderedDict(sorted(pids_in_snapshots.items(), key=lambda t: t[1], reverse=True))
+        for i in range(0, len(ordered_dict)):
+            items = ordered_dict.items()[i]
+            (pid, command) = self.__decode(items[0])
+            self.__pids_in_snapshots.append([self.get_filesystem_name(), pid, command, items[1]])
+
+        ordered_dict = OrderedDict(sorted(pids_to_glocks.items(), key=lambda t: len(t[1]), reverse=True))
+        for i in range(0, len(ordered_dict)):
+            items = ordered_dict.items()[i]
+            (pid, command) = self.__decode(items[0])
+            if (len(items[1]) > 1):
+                # Change to string instead of list for value. do like glocks_high_demote_seconds.
+                self.__pids_using_multiple_glocks.append([self.get_filesystem_name(), pid, command, len(items[1])])
 
     def console(self):
-        if (self.get_snapshots()):
-            pass
+        if (self.__pids_in_snapshots):
+            print tableize(self.__pids_in_snapshots,
+                           ["Filesystem", "Pid", "Command", "Number of Snapshots Appeared in"])
+
+        if (self.__pids_using_multiple_glocks):
+            print tableize(self.__pids_using_multiple_glocks,
+                           ["Filesystem", "Pid", "Command", "Number of Glocks Appeared in"])
 
     def write(self):
-        if (self.get_snapshots()):
-            pass
+        wdata = ""
+        if (self.__pids_in_snapshots):
+            wdata += tableize(self.__pids_in_snapshots,
+                              ["Filesystem", "Pid", "Command", "Number of Snapshots Appeared in"],
+                              colorize=True)
+        if (wdata):
+            filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
+            path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+                                                            self.get_filesystem_name()), filename)
+            if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
+                message = "An error occurred writing the glocks stats to the file: %s" %(path_to_output_file)
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+

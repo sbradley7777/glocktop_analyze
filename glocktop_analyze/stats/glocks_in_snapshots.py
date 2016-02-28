@@ -39,11 +39,11 @@ class GlocksInSnapshots(Stats):
 
     def console(self):
         if (self.__table):
-            print tableize(self.__table, ["Filesystem Name", "Glock Type/Glocks Inode", "Appeared in Snapshots Count"])
+            print tableize(self.__table, ["Filesystem Name", "Glock Type/Glocks Inode", "Number of Snapshots Appeared in"])
 
     def write(self):
         if (self.__table):
-            ftable = tableize(self.__table, ["Filesystem Name", "Glock Type/Glocks Inode", "Appeared in Snapshots Count"], colorize=False)
+            ftable = tableize(self.__table, ["Filesystem Name", "Glock Type/Glocks Inode", "Number of Snapshots Appeared in"], colorize=False)
             filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
             path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                             self.get_filesystem_name()), filename)

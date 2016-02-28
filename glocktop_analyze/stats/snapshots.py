@@ -34,9 +34,6 @@ class Snapshots(Stats):
             print tableize(self.__dlm_activity, ["Filesystem", "Snapshot Time", "Number of DLM Waiters"])
 
     def write(self):
-        filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
-        path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
-                                                        self.get_filesystem_name()), filename)
         wdata = ""
         if (self.get_snapshots()):
             wdata += tableize([[self.get_filesystem_name(), str(self.__count), self.__start_time,
@@ -47,6 +44,9 @@ class Snapshots(Stats):
                                ["Filesystem", "Snapshot Time", "Number of DLM Waiters"],
                                colorize=False) + "\n"
         if (wdata):
+            filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
+            path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+                                                            self.get_filesystem_name()), filename)
             if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
                 message = "An error occurred writing the glocks stats to the file: %s" %(path_to_output_file)
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
