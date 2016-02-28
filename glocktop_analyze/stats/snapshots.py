@@ -22,16 +22,17 @@ class Snapshots(Stats):
             self.__stop_time = str(snapshot.get_date_time())
 
     def console(self):
-        print tableize([[self.get_filesystem_name(), str(self.__count), self.__start_time, self.__stop_time]],
-                       ["Filesystem", "Snapshots", "Start Time", "Stop Time"])
-
+        if (self.get_snapshots()):
+            print tableize([[self.get_filesystem_name(), str(self.__count), self.__start_time, self.__stop_time]],
+                           ["Filesystem", "Snapshots", "Start Time", "Stop Time"])
 
     def write(self):
-        ftable = tableize([[self.get_filesystem_name(), str(self.__count), self.__start_time, self.__stop_time]],
-                          ["Filesystem", "Snapshots", "Start Time", "Stop Time"])
-        filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
-        path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
-                                                        self.get_filesystem_name()), filename)
-        if (not write_to_file(path_to_output_file, ftable, append_to_file=False, create_file=True)):
-            message = "An error occurred writing the glocks stats to the file: %s" %(path_to_output_file)
-            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+        if (self.get_snapshots()):
+            ftable = tableize([[self.get_filesystem_name(), str(self.__count), self.__start_time, self.__stop_time]],
+                              ["Filesystem", "Snapshots", "Start Time", "Stop Time"])
+            filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
+            path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+                                                            self.get_filesystem_name()), filename)
+            if (not write_to_file(path_to_output_file, ftable, append_to_file=False, create_file=True)):
+                message = "An error occurred writing the glocks stats to the file: %s" %(path_to_output_file)
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)

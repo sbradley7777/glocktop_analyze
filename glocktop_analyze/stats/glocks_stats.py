@@ -89,24 +89,27 @@ class GSStats(Stats):
                 filesystem_name), formatted_table)
 
     def console(self):
-        print "%s\n" %(self.__console_summary.rstrip())
+        if (self.__console_summary):
+            print "%s\n" %(self.__console_summary.rstrip())
 
     def write(self):
-        filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
-        path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
-                                                        self.get_filesystem_name()), filename)
-        if (not write_to_file(path_to_output_file, self.__file_summary, append_to_file=False, create_file=True)):
-            message = "An error occurred writing the glocks stats to the file: %s" %(path_to_output_file)
-            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+        if (self.__file_summary):
+            filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
+            path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+                                                            self.get_filesystem_name()), filename)
+            if (not write_to_file(path_to_output_file, self.__file_summary, append_to_file=False, create_file=True)):
+                message = "An error occurred writing the glocks stats to the file: %s" %(path_to_output_file)
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
 
     def graph(self, enable_png_format=False):
-        path_to_image_files = self.__generate_graphs_by_glock_type(format_png=enable_png_format)
-        if (path_to_image_files):
-            generate_graph_index_page(os.path.join(self.get_path_to_output_dir(),
-                                                   self.get_filesystem_name()),
-                                      path_to_image_files, "Glock Types")
-        path_to_image_files = self.__generate_graphs_by_glock_state(format_png=enable_png_format)
-        if (path_to_image_files):
-            generate_graph_index_page(os.path.join(self.get_path_to_output_dir(),
-                                                   self.get_filesystem_name()),
-                                      path_to_image_files, "Glock States")
+        if (self.get_snapshots()):
+            path_to_image_files = self.__generate_graphs_by_glock_type(format_png=enable_png_format)
+            if (path_to_image_files):
+                generate_graph_index_page(os.path.join(self.get_path_to_output_dir(),
+                                                       self.get_filesystem_name()),
+                                          path_to_image_files, "Glock Types")
+            path_to_image_files = self.__generate_graphs_by_glock_state(format_png=enable_png_format)
+            if (path_to_image_files):
+                generate_graph_index_page(os.path.join(self.get_path_to_output_dir(),
+                                                       self.get_filesystem_name()),
+                                          path_to_image_files, "Glock States")

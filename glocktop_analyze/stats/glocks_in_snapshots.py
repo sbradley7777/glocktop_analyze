@@ -38,13 +38,15 @@ class GlocksInSnapshots(Stats):
                 self.__table.append([self.get_filesystem_name(), pair[0], pair[1]])
 
     def console(self):
-        print tableize(self.__table, ["Filesystem Name", "Glock Type/Glocks Inode", "Appeared in Snapshots Count"])
+        if (self.__table):
+            print tableize(self.__table, ["Filesystem Name", "Glock Type/Glocks Inode", "Appeared in Snapshots Count"])
 
     def write(self):
-        ftable = tableize(self.__table, ["Filesystem Name", "Glock Type/Glocks Inode", "Appeared in Snapshots Count"], colorize=False)
-        filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
-        path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
-                                                        self.get_filesystem_name()), filename)
-        if (not write_to_file(path_to_output_file, ftable, append_to_file=False, create_file=True)):
-            message = "An error occurred writing the glocks stats to the file: %s" %(path_to_output_file)
-            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+        if (self.__table):
+            ftable = tableize(self.__table, ["Filesystem Name", "Glock Type/Glocks Inode", "Appeared in Snapshots Count"], colorize=False)
+            filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
+            path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+                                                            self.get_filesystem_name()), filename)
+            if (not write_to_file(path_to_output_file, ftable, append_to_file=False, create_file=True)):
+                message = "An error occurred writing the glocks stats to the file: %s" %(path_to_output_file)
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)

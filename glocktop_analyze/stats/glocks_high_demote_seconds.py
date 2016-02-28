@@ -10,7 +10,7 @@ from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, table
 class GlocksHighDemoteSeconds(Stats):
     def __init__(self, snapshots, path_to_output_dir):
         Stats.__init__(self, snapshots, "Glocks with High Demote Seconds", path_to_output_dir)
-        self.__demote_seconds_table = [] 
+        self.__table = [] 
 
 
     def __encode(self, glock_type, glock_inode):
@@ -50,19 +50,21 @@ class GlocksHighDemoteSeconds(Stats):
                     demote_time_str = "%s %d" %(glocks_high_demote_seconds.get(hashkey),
                                                 demote_time)
                     glocks_high_demote_seconds[hashkey] = demote_time_str
-        self.__demote_seconds_table = []
+        self.__table = []
         for hashkey in glocks_high_demote_seconds.keys():
-            self.__demote_seconds_table += self.__tableify(hashkey, glocks_high_demote_seconds.get(hashkey))
+            self.__table += self.__tableify(hashkey, glocks_high_demote_seconds.get(hashkey))
 
 
     def console(self):
-        print tableize(self.__demote_seconds_table,["Filesystem", "Snapshots", "Demote Seconds"])
+        if (self.__table):
+            print tableize(self.__table,["Filesystem", "Snapshots", "Demote Seconds"])
 
     def write(self):
-        ftable = tableize(self.__demote_seconds_table,["Filesystem", "Snapshots", "Demote Seconds"], colorize=False)
-        filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
-        path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+        if (self.__table):
+            ftable = tableize(self.__table,["Filesystem", "Snapshots", "Demote Seconds"], colorize=False)
+            filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
+            path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                         self.get_filesystem_name()), filename)
-        if (not write_to_file(path_to_output_file, ftable, append_to_file=False, create_file=True)):
-            message = "An error occurred writing the glocks stats to the file: %s" %(path_to_output_file)
-            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+            if (not write_to_file(path_to_output_file, ftable, append_to_file=False, create_file=True)):
+                message = "An error occurred writing the glocks stats to the file: %s" %(path_to_output_file)
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)

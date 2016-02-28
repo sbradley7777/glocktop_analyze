@@ -108,9 +108,10 @@ class GlocksWaitersTime(Stats):
         self.__glocks_holder_waiters_by_date = {key: glocks_holder_waiters_by_date[key] for key in glocks_holder_waiters_by_date if key in glocks_holder_waiters_counter.keys()}
 
     def graph(self, enable_png_format=False):
-        path_to_image_files = self.__generate_graphs_glocks_holder_waiter(self.__glocks_holder_waiters_by_date,
-                                                                          self.__snapshots_dt, format_png=enable_png_format)
-        if (path_to_image_files):
-            generate_graph_index_page(os.path.join(self.get_path_to_output_dir(),
-                                                   self.get_filesystem_name()),
-                                      path_to_image_files, self.get_title())
+        if (self.__glocks_holder_waiters_by_date):
+            path_to_image_files = self.__generate_graphs_glocks_holder_waiter(self.__glocks_holder_waiters_by_date,
+                                                                              self.__snapshots_dt, format_png=enable_png_format)
+            if (path_to_image_files):
+                generate_graph_index_page(os.path.join(self.get_path_to_output_dir(),
+                                                       self.get_filesystem_name()),
+                                          path_to_image_files, self.get_title())
