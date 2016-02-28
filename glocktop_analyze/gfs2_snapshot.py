@@ -69,14 +69,14 @@ class GFS2Snapshot():
         return self.__dlm_activity
 
 class DLMActivity():
-    def __init__(self, dlm_dirtbl_size, dlm_rsbtbl_size, dlm_lkbtbl_size, activity_count):
+    def __init__(self, dlm_dirtbl_size, dlm_rsbtbl_size, dlm_lkbtbl_size, waiter_count):
         self.__dlm_dirtbl_size = dlm_dirtbl_size
         self.__dlm_rsbtbl_size = dlm_rsbtbl_size
         self.__dlm_lkbtbl_size = dlm_lkbtbl_size
-        self.__activity_count = activity_count
+        self.__waiter_count = waiter_count
 
     def __str__(self):
-        return "DLM: %d waiters with hash table sizes: %d/%d/%d" %(self.get_activity_count(),
+        return "DLM: %d waiters with hash table sizes: %d/%d/%d" %(self.get_waiter_count(),
                                                                    self.get_dlm_dirtbl_size(),
                                                                    self.get_dlm_rsbtbl_size(),
                                                                    self.get_dlm_lkbtbl_size())
@@ -90,5 +90,5 @@ class DLMActivity():
     def get_dlm_lkbtbl_size(self):
         return self.__dlm_lkbtbl_size
 
-    def get_activity_count(self):
-        return self.__activity_count
+    def get_waiter_count(self):
+        return self.__waiter_count
