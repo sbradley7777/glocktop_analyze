@@ -20,6 +20,7 @@ Current TODO:
   * 10.
 * Do i need to set as global var or some option for the var: max_glocks_to_graph
 * Do the same automatic disable of png support if the png packages not installed.
+* Add DLM stats to SNapshots stats
 
 RFEs:
 * Add remaining stat queries and stat tables like for pids, DLM.
@@ -88,7 +89,7 @@ def __get_options(version) :
                          default=False)
     cmd_parser.add_option("-q", "--quiet",
                          action="store_true",
-                         dest="disableLoggingToConsole",
+                         dest="disable_std_out",
                          help="disables logging to console",
                          default=False)
     cmd_parser.add_option("-y", "--no_ask",
@@ -229,7 +230,7 @@ if __name__ == "__main__":
         # #######################################################################
         # Set the logging levels.
         # #######################################################################
-        if ((cmdline_opts.enableDebugLogging) and (not cmdline_opts.disableLoggingToConsole)):
+        if ((cmdline_opts.enableDebugLogging) and (not cmdline_opts.disable_std_out)):
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).setLevel(logging.DEBUG)
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug("Debugging has been enabled.")
         # #######################################################################
@@ -346,7 +347,7 @@ if __name__ == "__main__":
                         glocktop_summary_console += "%s\n%s\n" %(ColorizeConsoleText.red(str(snapshot)), current_summary)
                         glocktop_summary_file += "%s\n%s\n" %(str(snapshot), current_summary)
 
-            if (glocktop_summary_console):
+            if (glocktop_summary_console and not cmdline_opts.disable_std_out):
                 print "%s\n" %(glocktop_summary_console.rstrip())
             path_to_output_file = os.path.join(os.path.join(path_to_output_dir, filesystem_name), "glocktop_summary.txt")
             if (not write_to_file(path_to_output_file, glocktop_summary_file,
@@ -362,6 +363,7 @@ if __name__ == "__main__":
         from glocktop_analyze.stats.glocks_high_demote_seconds import GlocksHighDemoteSeconds
         from glocktop_analyze.stats.glocks_in_snapshots import GlocksInSnapshots
         from glocktop_analyze.stats.glocks_waiters_time import GlocksWaitersTime
+        from glocktop_analyze.stats.pids import Pids
 
         # svg does better charts. png support requires the python files:
         # lxml, cairosvg, tinycss, cssselect
@@ -376,7 +378,8 @@ if __name__ == "__main__":
             snapshots = snapshots_by_filesystem.get(filesystem_name)
             gsstats_stats = GSStats(snapshots, path_to_output_dir)
             gsstats_stats.analyze()
-            gsstats_stats.console()
+            if (not cmdline_opts.disable_std_out):
+                gsstats_stats.console()
             gsstats_stats.write()
             try:
                 if (not cmdline_opts.disable_graphs):
@@ -385,19 +388,21 @@ if __name__ == "__main__":
                 pass
             snapshots_stats = Snapshots(snapshots, path_to_output_dir)
             snapshots_stats.analyze()
-            snapshots_stats.console()
+            if (not cmdline_opts.disable_std_out):
+                snapshots_stats.console()
             snapshots_stats.write()
 
             glocks_high_demote_secs_stats = GlocksHighDemoteSeconds(snapshots, path_to_output_dir)
             glocks_high_demote_secs_stats.analyze()
-            glocks_high_demote_secs_stats.console()
+            if (not cmdline_opts.disable_std_out):
+                glocks_high_demote_secs_stats.console()
             glocks_high_demote_secs_stats.write()
 
             glocks_in_snapshots_stats = GlocksInSnapshots(snapshots, path_to_output_dir)
             glocks_in_snapshots_stats.analyze()
-            glocks_in_snapshots_stats.console()
+            if (not cmdline_opts.disable_std_out):
+                glocks_in_snapshots_stats.console()
             glocks_in_snapshots_stats.write()
-
             try:
                 if (not cmdline_opts.disable_graphs):
                     glocks_waiters_time = GlocksWaitersTime(snapshots, path_to_output_dir)
@@ -405,6 +410,12 @@ if __name__ == "__main__":
                     glocks_waiters_time.graph(enable_png_format)
             except AttributeError:
                 pass
+            pids_stats = Pids(snapshots, path_to_output_dir)
+            pids_stats.analyze()
+            if (not cmdline_opts.disable_std_out):
+                pids_stats.console()
+            pids_stats.write()
+
     except KeyboardInterrupt:
         print ""
         message =  "This script will exit since control-c was executed by end user."
