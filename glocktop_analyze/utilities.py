@@ -14,6 +14,7 @@ import os
 import os.path
 import re
 import locale
+from copy import deepcopy
 locale.setlocale(locale.LC_NUMERIC, "")
 
 import glocktop_analyze
@@ -242,11 +243,13 @@ def tableize(rows, header, colorize=True):
     sequence of sequences with the 0th element being the header.
     https://gist.github.com/lonetwin/4721748
     """
+    # Make a copy of the data
+    rows_copy = deepcopy(rows)
     formatted_table = ""
-    if (not rows):
+    if (not rows_copy):
         return formatted_table
 
-    rows.insert(0, header)
+    rows_copy.insert(0, header)
     def __format_item(item):
         import locale
         locale.setlocale(locale.LC_NUMERIC, "")
@@ -256,9 +259,9 @@ def tableize(rows, header, colorize=True):
             return item.encode("utf-8")
 
     # Convert all values in rows to strings.
-    if (len(rows) > 0):
+    if (len(rows_copy) > 0):
         converted_rows_to_str = []
-        for row in rows:
+        for row in rows_copy:
             current_row = []
             for item in row:
                 current_row.append(__format_item(item))

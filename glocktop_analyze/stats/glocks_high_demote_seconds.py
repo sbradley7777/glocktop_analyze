@@ -10,7 +10,7 @@ from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, table
 class GlocksHighDemoteSeconds(Stats):
     def __init__(self, snapshots, path_to_output_dir):
         Stats.__init__(self, snapshots, "Glocks with High Demote Seconds", path_to_output_dir)
-        self.__glocks_high_demote_seconds = {}
+        self.__demote_seconds_table = [] 
 
 
     def __encode(self, glock_type, glock_inode):
@@ -39,29 +39,27 @@ class GlocksHighDemoteSeconds(Stats):
         return table
 
     def analyze(self):
+        glocks_high_demote_seconds = {}
         for snapshot in self.get_snapshots():
             for glock in snapshot.get_glocks():
                 demote_time = int(glock.get_demote_time())
                 if (demote_time > 0):
                     hashkey = self.__encode(glock.get_type(), glock.get_inode())
-                    if (not self.__glocks_high_demote_seconds.has_key(hashkey)):
-                        self.__glocks_high_demote_seconds[hashkey] = ""
-                    demote_time_str = "%s %d" %(self.__glocks_high_demote_seconds.get(hashkey),
+                    if (not glocks_high_demote_seconds.has_key(hashkey)):
+                        glocks_high_demote_seconds[hashkey] = ""
+                    demote_time_str = "%s %d" %(glocks_high_demote_seconds.get(hashkey),
                                                 demote_time)
-                    self.__glocks_high_demote_seconds[hashkey] = demote_time_str
+                    glocks_high_demote_seconds[hashkey] = demote_time_str
+        self.__demote_seconds_table = []
+        for hashkey in glocks_high_demote_seconds.keys():
+            self.__demote_seconds_table += self.__tableify(hashkey, glocks_high_demote_seconds.get(hashkey))
 
 
     def console(self):
-        table = []
-        for hashkey in self.__glocks_high_demote_seconds.keys():
-            table += self.__tableify(hashkey, self.__glocks_high_demote_seconds.get(hashkey))
-        print tableize(table,["Filesystem", "Snapshots", "Demote Seconds"])
+        print tableize(self.__demote_seconds_table,["Filesystem", "Snapshots", "Demote Seconds"])
 
     def write(self):
-        table = []
-        for hashkey in self.__glocks_high_demote_seconds.keys():
-            table += self.__tableify(hashkey, self.__glocks_high_demote_seconds.get(hashkey))
-        ftable = tableize(table,["Filesystem", "Snapshots", "Demote Seconds"], colorize=False)
+        ftable = tableize(self.__demote_seconds_table,["Filesystem", "Snapshots", "Demote Seconds"], colorize=False)
         filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
         path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                         self.get_filesystem_name()), filename)
