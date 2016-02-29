@@ -25,7 +25,8 @@ Current TODO:
   subset of data if data has over 100 or 200 snapshots. 8000 graph points takes forever
   * 10.
 * Do i need to set as global var or some option for the var: max_glocks_to_graph
-* Do the same automatic disable of png support if the png packages not installed.
+* Add option to enable png support and uncomment code to automatically check
+  if can be enabled in the options where i hide and show option if libs found.
 * Add a warning() function that will output any issues that are found, such as
   high demote seconds, high dlm, etc. Keep a var that I write warnings too,
   maybe a dict that says DLM-> high waiters, glocks->high demote. Then gather
@@ -51,10 +52,8 @@ def get_levels(self):
 
 
 RFEs:
-* Add remaining stat queries and stat tables like for pids, DLM.
 * NEED OPTION: To disable_call_trace so call trace not printed. Still not
   parsing call_trace or U data.
-* Warning on high demote_seconds, high waiter count, high DLM traffic.
 * Could i combine the data into 1 file. Take 8 glocktops, then write to 1 file
   with everything sorted by date to see what is happenign on all nodes at around
   same time. Do not think a way to group cause started at different times and
@@ -62,18 +61,7 @@ RFEs:
 
 
 RFEs for graphs:
-* Need to figure out why glock_holder_waiters_count_over_time not plotting
- correctly and why not all y-axis is showing up.
 * For graphs do not like how i am storing date/time and int in list for graphing.
-* MAYBE NEED a GLOCK STAT OBEJECT to hold: hostname, filesname, date, glock,
- holder/waiter count, pids, demote_time.  Stuff like keeping up with
- glock-filesystem might get tricky and eventually parsing of multiple glocktop
- on multiple nodes.
-* Create graphs for the following:
-  - Top 10 glocks with waiters and graph the glocks waiter count over time.
-  - pid -> glocks with that pid | count
-  - glock -> pids
-  - peak for highest number of holder/waiters for each glock
 * Verify data in graph correct.
 
 """
@@ -97,6 +85,14 @@ from glocktop_analyze.gfs2_snapshot import GFS2Snapshot, DLMActivity
 from glocktop_analyze.glock import Glock, GlockHolder, GlockObject
 from glocktop_analyze.glocks_stats import GlocksStats, GlockStat
 from glocktop_analyze.parsers.gfs2_snapshot import parse_gfs2_snapshot, process_gfs2_snapshot
+
+# Need to convert this to imports like plugins
+from glocktop_analyze.stats.glocks_stats import GSStats
+from glocktop_analyze.stats.snapshots import Snapshots
+from glocktop_analyze.stats.glocks_high_demote_seconds import GlocksHighDemoteSeconds
+from glocktop_analyze.stats.glocks_in_snapshots import GlocksInSnapshots
+from glocktop_analyze.stats.glocks_waiters_time import GlocksWaitersTime
+from glocktop_analyze.stats.pids import Pids
 
 # #####################################################################
 # Global vars:
@@ -384,16 +380,24 @@ if __name__ == "__main__":
         # #######################################################################
         # Gather, print, and graph  stats
         # #######################################################################
-        from glocktop_analyze.stats.glocks_stats import GSStats
-        from glocktop_analyze.stats.snapshots import Snapshots
-        from glocktop_analyze.stats.glocks_high_demote_seconds import GlocksHighDemoteSeconds
-        from glocktop_analyze.stats.glocks_in_snapshots import GlocksInSnapshots
-        from glocktop_analyze.stats.glocks_waiters_time import GlocksWaitersTime
-        from glocktop_analyze.stats.pids import Pids
-
         # svg does better charts. png support requires the python files:
         # lxml, cairosvg, tinycss, cssselect
+        #enable_png_format=True
+        #libs_required_for_png_support = ["cssselect", "cairosvg"]
+        #import pkgutil
+        #for lib in libs_required_for_png_support:
+        #    try:
+        #        if (pkgutil.find_loader(lib) == None):
+        #            enable_png_format = False
+        #    except (ImportError, NameError):
+        #        message = "Failed to find import packages needed for png support: %s." %(lib)
+        #        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+        #        enable_png_format = False
+        #print enable_png_format
+
+        # For now keep it disabled.
         enable_png_format=False
+
 
         # See if way to make this work like a plugin instead of having to import
         # then run. Just run them all like sos.
@@ -441,7 +445,6 @@ if __name__ == "__main__":
             if (not cmdline_opts.disable_std_out):
                 pids_stats.console()
             pids_stats.write()
-
     except KeyboardInterrupt:
         print ""
         message =  "This script will exit since control-c was executed by end user."

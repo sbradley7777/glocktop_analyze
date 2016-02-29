@@ -24,17 +24,17 @@ class GlocksHighDemoteSeconds(Stats):
         table = []
         current_filesystem_name = self.get_filesystem_name()
         current_glock = glock_type_name
-        current_demo_seconds = ""
+        current_demote_seconds = ""
         index = 0
         for dss in demote_seconds.split():
             if (((index % 5) == 0) and (not index == 0)):
-                table.append([current_filesystem_name, current_glock, current_demo_seconds.strip()])
+                table.append([current_filesystem_name, current_glock, current_demote_seconds.strip()])
                 current_filesystem_name = "-"
                 current_glock = "-"
-                current_demo_seconds = dss
+                current_demote_seconds = dss
                 index = 0
             else:
-                current_demo_seconds += " %s" %(dss)
+                current_demote_seconds += " %s" %(dss)
                 index += 1
         return table
 
