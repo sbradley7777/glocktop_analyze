@@ -10,7 +10,7 @@ from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, table
 class GlocksHighDemoteSeconds(Stats):
     def __init__(self, snapshots, path_to_output_dir):
         Stats.__init__(self, snapshots, "Glocks with High Demote Seconds", path_to_output_dir)
-        self.__table = [] 
+        self.__table = []
 
 
     def __encode(self, glock_type, glock_inode):

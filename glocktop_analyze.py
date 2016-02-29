@@ -15,17 +15,43 @@
 
 
 Current TODO:
+* Can tranaction locks be ignored(1/2).
+* Can the tabify() code be cleaned up and not static? Could i create
+  code to take list tabify(mylist, max_string_per_row) and then then only
+  one i split is last element in list.
+* In addition, I might want to just use my table generator code instead of
+  one using now. Look into that.
 * Move the max_glocks_to_graph to graphs. Need to create a way to get smaller
   subset of data if data has over 100 or 200 snapshots. 8000 graph points takes forever
   * 10.
 * Do i need to set as global var or some option for the var: max_glocks_to_graph
 * Do the same automatic disable of png support if the png packages not installed.
-* Add DLM stats to SNapshots stats
+* Add a warning() function that will output any issues that are found, such as
+  high demote seconds, high dlm, etc. Keep a var that I write warnings too,
+  maybe a dict that says DLM-> high waiters, glocks->high demote. Then gather
+  all the warning and write a file. In stat create a warning data structure:
+    self.__warnings = {}
+
+ Create a private function to add warnings:
+   def __add_warning(type, description, level)
+   def get_warnings(self)
+
+ Might need object Warnings. This will make easier to keep track of level, title,
+ description.
+ StatWarnings
+   LEVELS = Same ones as used in loggign as far as names.
+ def __init__(self, title):
+   self.___warnings = {} # self.__warnings[level] = [list of warning messages]
+
+def get_warnings(self):
+def get_warning_level(self, level)
+def get_levels(self):
+* Create html pages for the summary, stats, everything instead of writing plain
+  text to file.
+
 
 RFEs:
 * Add remaining stat queries and stat tables like for pids, DLM.
-* Create html pages for the summary, stats, everything instead of writing plain
-  text to file.
 * NEED OPTION: To disable_call_trace so call trace not printed. Still not
   parsing call_trace or U data.
 * Warning on high demote_seconds, high waiter count, high DLM traffic.
