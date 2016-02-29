@@ -69,7 +69,8 @@ class Pids(Stats):
         for i in range(0, len(ordered_dict)):
             items = ordered_dict.items()[i]
             (pid, command) = self.__decode(items[0])
-            self.__pids_in_snapshots.append([self.get_filesystem_name(), pid, command, items[1]])
+            if (items[1] > 1):
+                self.__pids_in_snapshots.append([self.get_filesystem_name(), pid, command, items[1]])
 
         ordered_dict = OrderedDict(sorted(pids_to_glocks.items(), key=lambda t: len(t[1]), reverse=True))
         for i in range(0, len(ordered_dict)):

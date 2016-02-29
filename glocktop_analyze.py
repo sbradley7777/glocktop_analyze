@@ -15,6 +15,9 @@
 
 
 Current TODO:
+* Need to add note about minimums. Like mimimum times a pid shows up in
+  snapshots that is require to print/write. A couple places like this.
+  Need like a footer to write to output.
 * Can tranaction locks be ignored(1/2).
 * Can the tabify() code be cleaned up and not static? Could i create
   code to take list tabify(mylist, max_string_per_row) and then then only
