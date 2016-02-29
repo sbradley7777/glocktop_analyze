@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 import glocktop_analyze
 from glocktop_analyze.stats import Stats
-from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
+from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize, tableify
 
 class Pids(Stats):
     def __init__(self, snapshots, path_to_output_dir):
@@ -23,28 +23,6 @@ class Pids(Stats):
     def __decode(self, hashkey):
         hashkey_split = hashkey.split("-")
         return (hashkey_split[0], hashkey_split[1])
-
-    def __tableify(self, row, max_strings=5):
-        table = []
-        current_filesystem_name = row[0]
-        current_pid = row[1]
-        current_command = row[2]
-        current_glock_count = row[3]
-        current_long_string = ""
-        index = 0
-        for s in row[4].split():
-            if (((index % max_strings) == 0) and (not index == 0)):
-                table.append([current_filesystem_name, current_pid, current_command, current_glock_count, current_long_string.strip()])
-                current_filesystem_name = "-"
-                current_pid = "-"
-                current_command = "-"
-                current_glock_count = "-"
-                current_long_string = s
-                index = 0
-            else:
-                current_long_string += " %s" %(s)
-                index += 1
-        return table
 
     def analyze(self):
         # Need to create object to hold the pid, command,
@@ -78,7 +56,7 @@ class Pids(Stats):
             (pid, command) = self.__decode(items[0])
             if (len(items[1]) > 1):
                 # Change to string instead of list for value. do like glocks_high_demote_seconds.
-                self.__pids_using_multiple_glocks.append([self.get_filesystem_name(), pid, command, len(items[1]), items[1]])
+                self.__pids_using_multiple_glocks.append([self.get_filesystem_name(), pid, command, len(items[1].split()), items[1]])
 
     def console(self):
         if (self.__pids_in_snapshots):
@@ -88,7 +66,7 @@ class Pids(Stats):
         if (self.__pids_using_multiple_glocks):
             ftable = []
             for row in self.__pids_using_multiple_glocks:
-                ftable += self.__tableify(row)
+                ftable += tableify(row)
             print tableize(ftable,
                            ["Filesystem", "Pid", "Command", "Number of Glocks Appeared in", "Glock Type/Inode"])
 
@@ -101,7 +79,7 @@ class Pids(Stats):
         if (self.__pids_using_multiple_glocks):
             ftable = []
             for row in self.__pids_using_multiple_glocks:
-                ftable += self.__tableify(row)
+                ftable += tableify(row)
             wdata += tableize(ftable,
                               ["Filesystem", "Pid", "Command", "Number of Glocks Appeared in", "Glock Type/Inode"],
                               colorize=False)

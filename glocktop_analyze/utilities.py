@@ -15,6 +15,7 @@ import os.path
 import re
 import locale
 from copy import deepcopy
+import copy
 locale.setlocale(locale.LC_NUMERIC, "")
 
 import glocktop_analyze
@@ -237,6 +238,31 @@ class ColorizeConsoleText(object):
 # ##############################################################################
 # Functions
 # ##############################################################################
+def tableify(row, max_last_element_strings=5):
+    """
+    When the last element of a list has multiple space seperate values then return
+    mutliple lists so the last element does offset the table.
+    Returns a list of lists.
+    """
+    current_row = copy.copy(row)
+    last_element = current_row.pop()
+    table = []
+    index = 0
+    clast_element = ""
+    for s in last_element.split():
+        if (((index % max_last_element_strings) == 0) and (not index == 0)):
+            table.append(current_row + [clast_element.strip()])
+            clast_element = s
+            index = 0
+            current_row = ["-"] * len(current_row)
+        else:
+            clast_element += " %s" %(str(s))
+            index += 1
+    if (last_element):
+        table.append(current_row + [clast_element.strip()])
+    return table
+
+
 def tableize(rows, header, colorize=True):
     """
     Prints out a table using the data in `rows`, which is assumed to be a
@@ -288,8 +314,7 @@ def tableize(rows, header, colorize=True):
             if (not row_string.startswith("-")):
                 count = count + 1
             # Skip colorizing filler lines with no data "-|-|-".
-            if (((count % 2) == 0) and (colorize == True) and
-                (not row_string.replace(" ", "").startswith("-|-|-"))):
+            if ((count % 2) == 0) and (colorize == True):
                 row_string = ColorizeConsoleText.light_grey(row_string)
             formatted_table += row_string + "\n"
     return formatted_table
