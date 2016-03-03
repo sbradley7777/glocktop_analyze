@@ -59,10 +59,10 @@ logger = LogWriter(glocktop_analyze.MAIN_LOGGER_NAME,
                    disableConsoleLog=False)
 from glocktop_analyze.utilities import ColorizeConsoleText, get_data_from_file, tableize, write_to_file
 import glocktop_analyze.glocks_stats
-from glocktop_analyze.gfs2_snapshot import GFS2Snapshot, DLMActivity
+from glocktop_analyze.snapshot import Snapshot, DLMActivity
 from glocktop_analyze.glock import Glock, GlockHolder, GlockObject
 from glocktop_analyze.glocks_stats import GlocksStats, GlockStat
-from glocktop_analyze.parsers.gfs2_snapshot import parse_gfs2_snapshot, process_gfs2_snapshot
+from glocktop_analyze.parsers.snapshot import parse_snapshot, process_snapshot
 
 # Need to convert this to imports like plugins
 from glocktop_analyze.stats.glocks_stats import GSStats
@@ -289,12 +289,12 @@ if __name__ == "__main__":
                     # new one. All the glocks, holder/waiters, etc.
                     if ((not cmdline_opts.gfs2_filesystem_names) or
                         (gfs2_snapshot.get_filesystem_name().strip() in cmdline_opts.gfs2_filesystem_names)):
-                        process_gfs2_snapshot(gfs2_snapshot, snapshot_lines)
+                        process_snapshot(gfs2_snapshot, snapshot_lines)
                         if (not snapshots_by_filesystem.has_key(gfs2_snapshot.get_filesystem_name())):
                             snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()] = []
                         snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()].append(gfs2_snapshot)
                 # Process the new snapshot
-                gfs2_snapshot = parse_gfs2_snapshot(line, cmdline_opts.ignore_ended_process_and_tlocks)
+                gfs2_snapshot = parse_snapshot(line, cmdline_opts.ignore_ended_process_and_tlocks)
                 snapshot_lines = []
             else:
                 snapshot_lines.append(line)
@@ -307,7 +307,7 @@ if __name__ == "__main__":
         if (not gfs2_snapshot == None):
             if ((not cmdline_opts.gfs2_filesystem_names) or
                 (gfs2_snapshot.get_filesystem_name().strip() in cmdline_opts.gfs2_filesystem_names)):
-                process_gfs2_snapshot(gfs2_snapshot, snapshot_lines)
+                process_snapshot(gfs2_snapshot, snapshot_lines)
                 if (not snapshots_by_filesystem.has_key(gfs2_snapshot.get_filesystem_name())):
                     snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()] = []
                 snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()].append(gfs2_snapshot)

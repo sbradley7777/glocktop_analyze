@@ -12,7 +12,7 @@ import re
 import calendar
 from datetime import datetime
 
-from glocktop_analyze.gfs2_snapshot import GFS2Snapshot, DLMActivity
+from glocktop_analyze.snapshot import Snapshot, DLMActivity
 from glocktop_analyze.glock import Glock, GlockHolder, GlockObject
 from glocktop_analyze.glocks_stats import GlocksStats, GlockStat
 import glocktop_analyze.glocks_stats
@@ -20,7 +20,7 @@ import glocktop_analyze.glocks_stats
 from glocktop_analyze.parsers.glock import parse_glock,parse_glock_holder
 from glocktop_analyze.parsers.glocks_stats import parse_glocks_stats
 
-def parse_gfs2_snapshot(line, ignore_ended_processes=False):
+def parse_snapshot(line, ignore_ended_processes=False):
     days_regex = "(?P<day>%s)" % '|'.join(calendar.day_abbr[0:])
     months_regex = "(?P<month>%s)" % '|'.join(calendar.month_abbr[1:])
     dow_regex = "(?P<dow>\d{1,2})"
@@ -53,18 +53,18 @@ def parse_gfs2_snapshot(line, ignore_ended_processes=False):
                 dlm_activity = DLMActivity(int(mo_dlm.group("dlm_dirtbl_size")), int(mo_dlm.group("dlm_rsbtbl_size")),
                                            int(mo_dlm.group("dlm_lkbtbl_size")), len(mo_dlm.group("dlm_activity")))
 
-        return GFS2Snapshot(mo.group("filesystem"), hostname, date_time, dlm_activity, ignore_ended_processes)
+        return Snapshot(mo.group("filesystem"), hostname, date_time, dlm_activity, ignore_ended_processes)
     return None
 
-def process_gfs2_snapshot(gfs2_snapshot, snapshot_lines):
+def process_snapshot(snapshot, snapshot_lines):
     # Process any remaining items
-    if (not gfs2_snapshot == None):
+    if (not snapshot == None):
         glock = None
         glocks_stats_lines = []
         for sline in snapshot_lines:
             if (sline.startswith("G")):
                 glock = parse_glock(sline)
-                gfs2_snapshot.add_glock(glock)
+                snapshot.add_glock(glock)
             elif (not glock == None and sline.startswith("H")):
                 glock_holder = parse_glock_holder(sline)
                 if (not glock_holder == None):
@@ -100,8 +100,8 @@ def process_gfs2_snapshot(gfs2_snapshot, snapshot_lines):
                 # processes waiting.
                 glocks_stats_lines.append(sline)
         if (glocks_stats_lines):
-            filesystem_name = gfs2_snapshot.get_filesystem_name()
-            date_time = gfs2_snapshot.get_date_time()
+            filesystem_name = snapshot.get_filesystem_name()
+            date_time = snapshot.get_date_time()
             glocks_stats = GlocksStats(filesystem_name, date_time)
             for line in glocks_stats_lines:
                 stat_map = parse_glocks_stats(line)
@@ -109,4 +109,4 @@ def process_gfs2_snapshot(gfs2_snapshot, snapshot_lines):
                     glock_state = stat_map.get("glock_state")
                     for glock_type in glocktop_analyze.glocks_stats.GLOCK_TYPES:
                         glocks_stats.add_stat(glock_type, glock_state, int(stat_map.get(glock_type)))
-            gfs2_snapshot.add_glocks_stats(glocks_stats)
+            snapshot.add_glocks_stats(glocks_stats)

@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 
 import glocktop_analyze
-from glocktop_analyze.gfs2_snapshot import GFS2Snapshot
+from glocktop_analyze.snapshot import Snapshot
 from glocktop_analyze.glocks_stats import GlocksStats, GlockStat
 from glocktop_analyze.utilities import LogWriter, mkdirs, write_to_file
 

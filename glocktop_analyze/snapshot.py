@@ -8,7 +8,7 @@
 """
 from glocktop_analyze.glock import Glock
 
-class GFS2Snapshot():
+class Snapshot():
     # A collection of glocks for a filesystem at a specific time.
     def __init__(self, filesystem_name, hostname, date_time, dlm_activity = None, ignore_ended_process_and_tlocks=False):
         self.__filesystem_name = filesystem_name
