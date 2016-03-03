@@ -19,13 +19,10 @@ Current TODO:
 * Need to add note about minimums. Like mimimum times a pid shows up in
   snapshots that is require to print/write. A couple places like this.
   Need like a footer to write to output.
-* Can tranaction locks be ignored(1/2).
 * Move the max_glocks_to_graph to graphs. Need to create a way to get smaller
   subset of data if data has over 100 or 200 snapshots. 8000 graph points takes forever
   * 10.
   Do i need to set as global var or some option for the var: max_glocks_to_graph?
-* Add option to enable png support and uncomment code to automatically check
-  if can be enabled in the options where i hide and show option if libs found.
 * Add a warning() function that will output any issues that are found, such as
   high demote seconds, high dlm, etc. Keep a var that I write warnings too,
   maybe a dict that says DLM-> high waiters, glocks->high demote. Then gather
@@ -51,7 +48,11 @@ Current TODO:
 
 
 RFEs:
-* NEED OPTION: To disable_call_trace so call trace not printed. Still not
+* OPTION: Change ignore ended process and transaction locks to be disabled
+  by default. Change option to disable_ignoring.
+* OPTION: Add option to enable png support and uncomment code to automatically check
+  if can be enabled in the options where i hide and show option if libs found.
+* OPTION: To disable_call_trace so call trace not printed. Still not
   parsing call_trace or U data.
 * Could i combine the data into 1 file. Take 8 glocktops, then write to 1 file
   with everything sorted by date to see what is happenign on all nodes at around
@@ -146,10 +147,10 @@ def __get_options(version) :
                           type="string",
                           metavar="<gfs2 filesystem name>",
                           default=[])
-    cmd_parser.add_option("-E", "--ignore_ended_processes",
+    cmd_parser.add_option("-I", "--ignore_ended_process_and_tlocks",
                         action="store_true",
-                         dest="ignore_ended_processes",
-                         help="ignore all glocks that contain 1 holder for ended process",
+                         dest="ignore_ended_process_and_tlocks",
+                         help="ignore all glocks that contain 1 holder for ended process and transaction locks",
                          default=False)
     cmd_parser.add_option("-W", "--disable_show_waiters",
                           action="store_true",
@@ -315,7 +316,7 @@ if __name__ == "__main__":
                             snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()] = []
                         snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()].append(gfs2_snapshot)
                 # Process the new snapshot
-                gfs2_snapshot = parse_gfs2_snapshot(line, cmdline_opts.ignore_ended_processes)
+                gfs2_snapshot = parse_gfs2_snapshot(line, cmdline_opts.ignore_ended_process_and_tlocks)
                 snapshot_lines = []
             else:
                 snapshot_lines.append(line)
@@ -396,7 +397,6 @@ if __name__ == "__main__":
 
         # For now keep it disabled.
         enable_png_format=False
-
 
         # See if way to make this work like a plugin instead of having to import
         # then run. Just run them all like sos.
