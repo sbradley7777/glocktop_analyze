@@ -33,7 +33,7 @@ class Snapshots(Stats):
         if (self.__dlm_activity):
             print tableize(self.__dlm_activity, ["Filesystem", "Snapshot Time", "Number of DLM Waiters"])
 
-    def write(self):
+    def write(self, html_format=False):
         wdata = ""
         if (self.get_snapshots()):
             wdata += tableize([[self.get_filesystem_name(), str(self.__count), self.__start_time,

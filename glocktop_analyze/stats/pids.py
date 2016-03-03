@@ -70,7 +70,7 @@ class Pids(Stats):
             print tableize(ftable,
                            ["Filesystem", "Pid", "Command", "Number of Glocks Appeared in", "Glock Type/Inode"])
 
-    def write(self):
+    def write(self, html_format=False):
         wdata = ""
         if (self.__pids_in_snapshots):
             wdata += tableize(self.__pids_in_snapshots,

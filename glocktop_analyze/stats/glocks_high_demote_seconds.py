@@ -61,7 +61,7 @@ class GlocksHighDemoteSeconds(Stats):
         if (self.__table):
             print tableize(self.__table,["Filesystem", "Snapshots", "Demote Seconds"])
 
-    def write(self):
+    def write(self, html_format=False):
         if (self.__table):
             ftable = tableize(self.__table,["Filesystem", "Snapshots", "Demote Seconds"], colorize=False)
             filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))

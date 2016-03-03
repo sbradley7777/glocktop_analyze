@@ -19,7 +19,7 @@ class GSStats(Stats):
         self.__console_summary = ""
         self.__file_summary = ""
 
-    def __generate_graphs_by_glock_type(self, format_png=False):
+    def __generate_graphs_by_glock_type(self, png_format=False):
         path_to_output_dir = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                        self.get_filesystem_name()), "graphs")
         if (self.get_snapshots()):
@@ -44,10 +44,10 @@ class GSStats(Stats):
                                                             glock_states_stats,
                                                             "%s - %s" %(self.get_filesystem_name(), gtype),
                                                             "Time of Snapshots", "Glock States",
-                                                            format_png= format_png)
+                                                            png_format=png_format)
             return path_to_image_files
 
-    def __generate_graphs_by_glock_state(self, format_png=False):
+    def __generate_graphs_by_glock_state(self, png_format=False):
         path_to_output_dir = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                        self.get_filesystem_name()), "graphs")
         if (self.get_snapshots()):
@@ -72,7 +72,7 @@ class GSStats(Stats):
                                                             glock_types_stats,
                                                             "%s - %s" %(self.get_filesystem_name(), gstate),
                                                             "Time of Snapshots", "Glock Types",
-                                                            format_png=format_png)
+                                                            png_format=png_format)
             return path_to_image_files
 
     def analyze(self):
@@ -92,7 +92,7 @@ class GSStats(Stats):
         if (self.__console_summary):
             print "%s\n" %(self.__console_summary.rstrip())
 
-    def write(self):
+    def write(self, html_format=False):
         if (self.__file_summary):
             filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
             path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
@@ -101,14 +101,14 @@ class GSStats(Stats):
                 message = "An error occurred writing to the file: %s" %(path_to_output_file)
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
 
-    def graph(self, enable_png_format=False):
+    def graph(self, png_format=False):
         if (self.get_snapshots()):
-            path_to_image_files = self.__generate_graphs_by_glock_type(format_png=enable_png_format)
+            path_to_image_files = self.__generate_graphs_by_glock_type(png_format=png_format)
             if (path_to_image_files):
                 generate_graph_index_page(os.path.join(self.get_path_to_output_dir(),
                                                        self.get_filesystem_name()),
                                           path_to_image_files, "Glock Types")
-            path_to_image_files = self.__generate_graphs_by_glock_state(format_png=enable_png_format)
+            path_to_image_files = self.__generate_graphs_by_glock_state(png_format=png_format)
             if (path_to_image_files):
                 generate_graph_index_page(os.path.join(self.get_path_to_output_dir(),
                                                        self.get_filesystem_name()),

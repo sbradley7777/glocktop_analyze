@@ -41,7 +41,7 @@ class GlocksInSnapshots(Stats):
         if (self.__table):
             print tableize(self.__table, ["Filesystem Name", "Glock Type/Glocks Inode", "Number of Snapshots Appeared in"])
 
-    def write(self):
+    def write(self, html_format=False):
         if (self.__table):
             ftable = tableize(self.__table, ["Filesystem Name", "Glock Type/Glocks Inode", "Number of Snapshots Appeared in"], colorize=False)
             filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))

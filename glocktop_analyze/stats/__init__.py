@@ -60,17 +60,17 @@ class Stats(object):
     def console(self):
         pass
 
-    def write(self, enable_html_format=False):
+    def write(self, html_format=False):
         pass
 
-    def graph(self, enable_png_format=False):
+    def graph(self, png_format=False):
         pass
 
 
 # #######################################################################
 # Functions
 # #######################################################################
-def generate_date_graphs(path_to_output_dir, x_axis, y_axis_map, title, x_axis_title, y_axis_title, format_png=False):
+def generate_date_graphs(path_to_output_dir, x_axis, y_axis_map, title, x_axis_title, y_axis_title, png_format=False):
     gstyle = Style(
         # http://www.pygal.org/en/latest/documentation/custom_styles.html
         background='white',
@@ -97,7 +97,7 @@ def generate_date_graphs(path_to_output_dir, x_axis, y_axis_map, title, x_axis_t
     if (mkdirs(path_to_output_dir)):
         png_format_rendered = False
         path_to_image_file = ""
-        if (format_png):
+        if (png_format):
             try:
                 path_to_image_file = os.path.join(path_to_output_dir, "%s_stat.png" %(title.replace(" ", "_").lower()))
                 message = "Writing graph to %s" %(path_to_image_file)
@@ -119,7 +119,7 @@ def generate_date_graphs(path_to_output_dir, x_axis, y_axis_map, title, x_axis_t
             path_to_image_files.append(path_to_image_file)
     return path_to_image_files
 
-def generate_bar_graphs(path_to_output_dir, x_axis, y_axis, title, x_axis_title, y_axis_title, format_png=False):
+def generate_bar_graphs(path_to_output_dir, x_axis, y_axis, title, x_axis_title, y_axis_title, png_format=False):
     gstyle = Style(
         # http://www.pygal.org/en/latest/documentation/custom_styles.html
         background='white',
@@ -144,7 +144,7 @@ def generate_bar_graphs(path_to_output_dir, x_axis, y_axis, title, x_axis_title,
     if (mkdirs(path_to_output_dir)):
         png_format_rendered = False
         path_to_image_file = ""
-        if (format_png):
+        if (png_format):
             try:
                 path_to_image_file = os.path.join(path_to_output_dir, "%s_stat.png" %(title.replace(" - ", "-").replace(" ", "_").lower()))
                 message = "Writing graph to %s" %(path_to_image_file)

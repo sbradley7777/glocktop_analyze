@@ -22,7 +22,7 @@ class GlocksWaitersTime(Stats):
         hashkey_split = hashkey.split("/")
         return (hashkey_split[0], hashkey_split[1])
 
-    def __generate_graphs_glocks_holder_waiter(self, glocks_holder_waiters_by_date, snapshots_date_time, format_png=False):
+    def __generate_graphs_glocks_holder_waiter(self, glocks_holder_waiters_by_date, snapshots_date_time, png_format=False):
         # The x-axis will be the snapshots_date_time. Each glock in the map has a
         # value that is holder/waiter count at some date_time (we call gdt) instance
         # that should be a value in the snapshots_date_time.  If there is no gdt
@@ -54,7 +54,7 @@ class GlocksWaitersTime(Stats):
                                                         y_axis,
                                                         self.get_title(),
                                                         "Time of Snapshots", "Glock Type/Inode",
-                                                        format_png=format_png)
+                                                        png_format=png_format)
             return path_to_image_files
 
     def analyze(self):
@@ -107,10 +107,10 @@ class GlocksWaitersTime(Stats):
         # Map only glocks that had more than 1 holder+waiter so the possible items to graph is lower.
         self.__glocks_holder_waiters_by_date = {key: glocks_holder_waiters_by_date[key] for key in glocks_holder_waiters_by_date if key in glocks_holder_waiters_counter.keys()}
 
-    def graph(self, enable_png_format=False):
+    def graph(self, png_format=False):
         if (self.__glocks_holder_waiters_by_date):
             path_to_image_files = self.__generate_graphs_glocks_holder_waiter(self.__glocks_holder_waiters_by_date,
-                                                                              self.__snapshots_dt, format_png=enable_png_format)
+                                                                              self.__snapshots_dt, png_format=png_format)
             if (path_to_image_files):
                 generate_graph_index_page(os.path.join(self.get_path_to_output_dir(),
                                                        self.get_filesystem_name()),

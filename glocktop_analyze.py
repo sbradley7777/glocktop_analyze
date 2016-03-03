@@ -20,31 +20,11 @@ Current TODO:
   snapshots that is require to print/write. A couple places like this.
   Need like a footer to write to output.
 * Move the max_glocks_to_graph to graphs. Need to create a way to get smaller
-  subset of data if data has over 100 or 200 snapshots. 8000 graph points takes forever
-  * 10.
-  Do i need to set as global var or some option for the var: max_glocks_to_graph?
-* Add a warning() function that will output any issues that are found, such as
-  high demote seconds, high dlm, etc. Keep a var that I write warnings too,
-  maybe a dict that says DLM-> high waiters, glocks->high demote. Then gather
-  all the warning and write a file. In stat create a warning data structure:
-    self.__warnings = {}
-
-  Create a private function to add warnings:
-     def __add_warning(type, description, level)
-     def get_warnings(self)
-
-  Might need object Warnings. This will make easier to keep track of level, title,
-  description.
-    StatWarnings
-      LEVELS = Same ones as used in loggign as far as names.
-      def __init__(self, title):
-        self.___warnings = {} # self.__warnings[level] = [list of warning messages]
-
-   def get_warnings(self):
-   def get_warning_level(self, level)
-   def get_levels(self):
+  subset of data if data has over 100 or 200 snapshots. 8000 graph points takes forever.
+  - Do i need to set as global var or some option for the var: max_glocks_to_graph?
+* Check other stat classes to see if warnings needs to be added.
 * Create html pages for the summary, stats, everything instead of writing plain
-  text to file.
+  text to file. Added option to write(html_format=False).
 
 
 RFEs:
