@@ -403,6 +403,20 @@ if __name__ == "__main__":
 
         # Attribute error is thrown and silently caught if graphing is disable
         # because the require packages are not installed.
+        def merge_dicts(dict_org, dict_to_merge):
+            if (not dict_to_merge):
+                return dict_org
+            for key in dict_to_merge.keys():
+                if (not dict_org.has_key(key) or dict_org == None):
+                    dict_org[key] = []
+                value_org = dict_org[key]
+                value_merge = dict_to_merge[key]
+                for value in value_merge:
+                    if (not value in value_org):
+                        value_org.append(value)
+            return dict_org
+
+        warnings = {}
         for filesystem_name in snapshots_by_filesystem.keys():
             snapshots = snapshots_by_filesystem.get(filesystem_name)
             gsstats_stats = GSStats(snapshots, path_to_output_dir)
@@ -415,17 +429,21 @@ if __name__ == "__main__":
                     gsstats_stats.graph(enable_png_format)
             except AttributeError:
                 pass
+            warnings =  merge_dicts(warnings, gsstats_stats.get_warnings())
+
             snapshots_stats = Snapshots(snapshots, path_to_output_dir)
             snapshots_stats.analyze()
             if (not cmdline_opts.disable_std_out):
                 snapshots_stats.console()
             snapshots_stats.write()
+            warnings = merge_dicts(warnings, snapshots_stats.get_warnings())
 
             glocks_high_demote_secs_stats = GlocksHighDemoteSeconds(snapshots, path_to_output_dir)
             glocks_high_demote_secs_stats.analyze()
             if (not cmdline_opts.disable_std_out):
                 glocks_high_demote_secs_stats.console()
             glocks_high_demote_secs_stats.write()
+            warnings = merge_dicts(warnings, glocks_high_demote_secs_stats.get_warnings())
 
             glocks_in_snapshots_stats = GlocksInSnapshots(snapshots, path_to_output_dir)
             glocks_in_snapshots_stats.analyze()
@@ -439,11 +457,29 @@ if __name__ == "__main__":
                     glocks_waiters_time.graph(enable_png_format)
             except AttributeError:
                 pass
+            warnings = merge_dicts(warnings, glocks_in_snapshots_stats.get_warnings())
+
             pids_stats = Pids(snapshots, path_to_output_dir)
             pids_stats.analyze()
             if (not cmdline_opts.disable_std_out):
                 pids_stats.console()
             pids_stats.write()
+            warnings = merge_dicts(warnings, pids_stats.get_warnings())
+
+            warnings_str = ""
+            for wkey in warnings.keys():
+            # Get the warnings that were found.
+                warnings_str += "%s\n" %(wkey)
+                for item in warnings.get(wkey):
+                    warnings_str += "\t%s\n" %(item)
+            if (warnings_str):
+                path_to_output_file = os.path.join(os.path.join(path_to_output_dir,
+                                                                filesystem_name),
+                                                   "warnings.txt")
+                if (not write_to_file(path_to_output_file, warnings_str, append_to_file=False, create_file=True)):
+                    message = "An error occurred writing the file: %s" %(path_to_output_file)
+                    logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+
     except KeyboardInterrupt:
         print ""
         message =  "This script will exit since control-c was executed by end user."

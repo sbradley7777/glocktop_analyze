@@ -30,6 +30,7 @@ class Stats(object):
         self.__snapshots = snapshots
         self.__title = title
         self.__path_to_output_dir = path_to_output_dir
+        self.__warnings = {}
 
     def get_snapshots(self):
         return self.__snapshots
@@ -45,17 +46,26 @@ class Stats(object):
             return self.__snapshots[0].get_filesystem_name()
         return ""
 
+    def add_warning(self, wtype, description):
+        if (not self.__warnings.has_key(wtype)):
+            self.__warnings[wtype] = []
+        self.__warnings[wtype].append(description)
+
     def analayze(self):
         pass
+
+    def get_warnings(self):
+        return self.__warnings
 
     def console(self):
         pass
 
-    def write(self, path_to_output_dir):
+    def write(self, enable_html_format=False):
         pass
 
-    def graph(self, path_to_output_dir, enable_png_format):
+    def graph(self, enable_png_format=False):
         pass
+
 
 # #######################################################################
 # Functions

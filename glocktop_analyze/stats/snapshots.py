@@ -48,5 +48,5 @@ class Snapshots(Stats):
             path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                             self.get_filesystem_name()), filename)
             if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
-                message = "An error occurred writing the glocks stats to the file: %s" %(path_to_output_file)
+                message = "An error occurred writing to the file: %s" %(path_to_output_file)
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
