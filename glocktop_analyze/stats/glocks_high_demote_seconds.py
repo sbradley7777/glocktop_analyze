@@ -77,7 +77,8 @@ class GlocksHighDemoteSeconds(Stats):
                 filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                                 self.get_filesystem_name()), filename)
-                bdata = generate_table(["Filesystem", "Snapshots", "Demote Seconds"], self.__table,
+                bdata = generate_table(self.__table,
+                                       ["Filesystem", "Snapshots", "Demote Seconds"],
                                        title=self.get_title(),
                                        description="Glocks that took longer than 0 seconds to demote a glock")
                 wdata = "%s\n%s\n%s" %(generate_table_header(), bdata, generate_footer())

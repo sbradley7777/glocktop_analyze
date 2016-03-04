@@ -15,7 +15,6 @@
 
 
 Current TODO:
-* Setup plugin for stats.
 * Need to add note about minimums. Like mimimum times a pid shows up in
   snapshots that is require to print/write. A couple places like this.
   Need like a footer to write to output.
@@ -23,11 +22,16 @@ Current TODO:
   subset of data if data has over 100 or 200 snapshots. 8000 graph points takes forever.
   - Do i need to set as global var or some option for the var: max_glocks_to_graph?
 * Check other stat classes to see if warnings needs to be added.
-* Create html pages for the summary, stats, everything instead of writing plain
-  text to file. Added option to write(html_format=False).
+* The warnings need to be done in html.
+* The glocktop summary needs to be done in html.
+* Have a html table style for rotating the color of table rows when the first
+  item starts with "-" and not odd/even approach.
+* Dont do formatting in stats.glocks_stats analyze() code, do in write() cause need
+  table for html output. SO need to do like oother stats.
 
 
 RFEs:
+* Setup plugin for stats.
 * OPTION: Change ignore ended process and transaction locks to be disabled
   by default. Change option to disable_ignoring.
 * OPTION: Add option to enable png support and uncomment code to automatically check
@@ -401,7 +405,7 @@ if __name__ == "__main__":
             gsstats_stats.analyze()
             if (not cmdline_opts.disable_std_out):
                 gsstats_stats.console()
-            gsstats_stats.write()
+            gsstats_stats.write(html_format=True)
             try:
                 if (not cmdline_opts.disable_graphs):
                     gsstats_stats.graph(enable_png_format)
@@ -427,7 +431,7 @@ if __name__ == "__main__":
             glocks_in_snapshots_stats.analyze()
             if (not cmdline_opts.disable_std_out):
                 glocks_in_snapshots_stats.console()
-            glocks_in_snapshots_stats.write()
+            glocks_in_snapshots_stats.write(html_format=True)
             try:
                 if (not cmdline_opts.disable_graphs):
                     glocks_waiters_time = GlocksWaitersTime(snapshots, path_to_output_dir)
@@ -441,7 +445,7 @@ if __name__ == "__main__":
             pids_stats.analyze()
             if (not cmdline_opts.disable_std_out):
                 pids_stats.console()
-            pids_stats.write()
+            pids_stats.write(html_format=True)
             warnings = merge_dicts(warnings, pids_stats.get_warnings())
 
             warnings_str = ""

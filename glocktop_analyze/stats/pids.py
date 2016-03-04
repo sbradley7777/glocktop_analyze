@@ -7,6 +7,8 @@ from collections import OrderedDict
 import glocktop_analyze
 from glocktop_analyze.stats import Stats
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize, tableify
+from glocktop_analyze.html import generate_table_header, generate_table
+from glocktop_analyze.html import generate_footer
 
 class Pids(Stats):
     def __init__(self, snapshots, path_to_output_dir):
@@ -71,23 +73,43 @@ class Pids(Stats):
                            ["Filesystem", "Pid", "Command", "Number of Glocks Appeared in", "Glock Type/Inode"])
 
     def write(self, html_format=False):
-        wdata = ""
-        if (self.__pids_in_snapshots):
-            wdata += tableize(self.__pids_in_snapshots,
-                              ["Filesystem", "Pid", "Command", "Number of Snapshots Appeared in"],
-                              colorize=True) + "\n"
-        if (self.__pids_using_multiple_glocks):
-            ftable = []
-            for row in self.__pids_using_multiple_glocks:
-                ftable += tableify(row)
-            wdata += tableize(ftable,
-                              ["Filesystem", "Pid", "Command", "Number of Glocks Appeared in", "Glock Type/Inode"],
-                              colorize=False)
-        if (wdata):
-            filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
-            path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
-                                                            self.get_filesystem_name()), filename)
-            if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
-                message = "An error occurred writing to the file: %s" %(path_to_output_file)
-                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
-
+        if (not html_format):
+            wdata = ""
+            if (self.__pids_in_snapshots):
+                wdata += tableize(self.__pids_in_snapshots,
+                                  ["Filesystem", "Pid", "Command", "Number of Snapshots Appeared in"],
+                                  colorize=True) + "\n"
+            if (self.__pids_using_multiple_glocks):
+                ftable = []
+                for row in self.__pids_using_multiple_glocks:
+                    ftable += tableify(row)
+                wdata += tableize(ftable,
+                                  ["Filesystem", "Pid", "Command", "Number of Glocks Appeared in", "Glock Type/Inode"],
+                                  colorize=False)
+            if (wdata):
+                filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
+                path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+                                                                self.get_filesystem_name()), filename)
+                if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
+                    message = "An error occurred writing to the file: %s" %(path_to_output_file)
+                    logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+        else:
+            bdata = ""
+            if (self.__pids_in_snapshots):
+                bdata += generate_table(self.__pids_in_snapshots,
+                                        ["Filesystem", "Pid", "Command", "Number of Snapshots Appeared in"],
+                                        title="Pids Appearing in Multiple Snapshots",
+                                        description="The pids that appeared in multiple snapshots.")
+            if (self.__pids_using_multiple_glocks):
+                bdata += generate_table(self.__pids_using_multiple_glocks,
+                                        ["Filesystem", "Pid", "Command", "Number of Glocks Appeared in", "Glock Type/Inode"],
+                                        title="Pids that Appeared in Multiple Glocks.",
+                                        description="The pids that appeared in multiple glocks.")
+            if (bdata):
+                wdata = "%s\n%s\n%s" %(generate_table_header(), bdata, generate_footer())
+                filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
+                path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+                                                                    self.get_filesystem_name()), filename)
+                if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
+                    message = "An error occurred writing to the file: %s" %(path_to_output_file)
+                    logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)

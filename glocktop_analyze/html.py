@@ -50,7 +50,7 @@ def generate_table_header():
     header_post = "</head>\n\t<body>\n"
     return "%s%s%s" %(header_pre, style, header_post)
 
-def generate_table(header, table, title="", description="", caption=""):
+def generate_table(table, header, title="", description="", caption=""):
     if (not table):
         return ""
     htable = ""
