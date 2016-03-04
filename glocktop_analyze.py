@@ -346,14 +346,14 @@ if __name__ == "__main__":
                     if (current_summary):
                         glocktop_summary_console += "%s\n%s\n" %(ColorizeConsoleText.red(str(snapshot)), current_summary)
                         glocktop_summary_file += "%s\n%s\n" %(str(snapshot), current_summary)
-
             if (glocktop_summary_console and not cmdline_opts.disable_std_out):
                 print "%s\n" %(glocktop_summary_console.rstrip())
-            path_to_output_file = os.path.join(os.path.join(path_to_output_dir, filesystem_name), "glocktop_summary.txt")
-            if (not write_to_file(path_to_output_file, glocktop_summary_file,
-                                  append_to_file=False, create_file=True)):
-                message = "An error occurred writing the glocktop summary file: %s" %(path_to_glocktop_summary_file)
-                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
+            if (glocktop_summary_console):
+                path_to_output_file = os.path.join(os.path.join(path_to_output_dir, filesystem_name), "glocktop_summary.txt")
+                if (not write_to_file(path_to_output_file, glocktop_summary_file,
+                                      append_to_file=False, create_file=True)):
+                    message = "An error occurred writing the glocktop summary file: %s" %(path_to_glocktop_summary_file)
+                    logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
 
         # #######################################################################
         # Gather, print, and graph  stats
@@ -413,7 +413,6 @@ if __name__ == "__main__":
             snapshots_stats.analyze()
             if (not cmdline_opts.disable_std_out):
                 snapshots_stats.console()
-            snapshots_stats.write()
             snapshots_stats.write(html_format=True)
             warnings = merge_dicts(warnings, snapshots_stats.get_warnings())
 
@@ -421,7 +420,7 @@ if __name__ == "__main__":
             glocks_high_demote_secs_stats.analyze()
             if (not cmdline_opts.disable_std_out):
                 glocks_high_demote_secs_stats.console()
-            glocks_high_demote_secs_stats.write()
+            glocks_high_demote_secs_stats.write(html_format=True)
             warnings = merge_dicts(warnings, glocks_high_demote_secs_stats.get_warnings())
 
             glocks_in_snapshots_stats = GlocksInSnapshots(snapshots, path_to_output_dir)

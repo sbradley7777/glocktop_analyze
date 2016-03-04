@@ -64,11 +64,8 @@ class Snapshots(Stats):
                 bdata += generate_table(["Filesystem", "Snapshot Time", "Number of DLM Waiters"],
                                         self.__dlm_activity, title="DLM Waiter Count",
                                         description="The number of DLM waiters for a snapshot. Only snapshots with DLM waiter count higher than 0 displayed.")
-                                        
-            #if (self.__count > 0):
             if (bdata):
                 wdata = "%s\n%s\n%s" %(generate_table_header(), bdata, generate_footer())
-                print wdata
                 filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                             self.get_filesystem_name()), filename)
