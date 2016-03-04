@@ -7,8 +7,8 @@ from collections import OrderedDict
 
 import glocktop_analyze
 from glocktop_analyze.stats import Stats
-from glocktop_analyze.utilities import write_to_file
-from glocktop_analyze.stats import generate_graph_index_page, generate_date_graphs
+from glocktop_analyze.stats import generate_date_graphs
+from glocktop_analyze.html import generate_graph_index_page
 
 class GlocksWaitersTime(Stats):
     def __init__(self, snapshots, path_to_output_dir):

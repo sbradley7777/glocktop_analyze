@@ -7,7 +7,8 @@ import glocktop_analyze
 from glocktop_analyze.stats import Stats
 from glocktop_analyze.glocks_stats import GlocksStats, GlockStat
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
-from glocktop_analyze.stats import generate_graph_index_page, generate_date_graphs
+from glocktop_analyze.stats import generate_date_graphs
+from glocktop_analyze.html import generate_graph_index_page
 
 class GSStats(Stats):
     def __init__(self, snapshots, path_to_output_dir):

@@ -6,6 +6,8 @@ import os.path
 import glocktop_analyze
 from glocktop_analyze.stats import Stats
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
+from glocktop_analyze.html import generate_table_header, generate_table
+from glocktop_analyze.html import generate_footer
 
 class Snapshots(Stats):
     def __init__(self, snapshots, path_to_output_dir):
@@ -34,19 +36,41 @@ class Snapshots(Stats):
             print tableize(self.__dlm_activity, ["Filesystem", "Snapshot Time", "Number of DLM Waiters"])
 
     def write(self, html_format=False):
-        wdata = ""
-        if (self.get_snapshots()):
-            wdata += tableize([[self.get_filesystem_name(), str(self.__count), self.__start_time,
-                                self.__stop_time]],
-                              ["Filesystem", "Snapshots", "Start Time", "Stop Time"], colorize=False) + "\n"
-        if (self.__dlm_activity):
-            wdata += tableize(self.__dlm_activity,
-                               ["Filesystem", "Snapshot Time", "Number of DLM Waiters"],
-                               colorize=False) + "\n"
-        if (wdata):
-            filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
-            path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+        if (not html_format):
+            wdata = ""
+            if (self.__count > 0):
+                wdata += tableize([[self.get_filesystem_name(), str(self.__count), self.__start_time,
+                                    self.__stop_time]],
+                                  ["Filesystem", "Snapshots", "Start Time", "Stop Time"], colorize=False) + "\n"
+            if (self.__dlm_activity):
+                wdata += tableize(self.__dlm_activity,
+                                  ["Filesystem", "Snapshot Time", "Number of DLM Waiters"],
+                                  colorize=False) + "\n"
+            if (wdata):
+                filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
+                path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+                                                                self.get_filesystem_name()), filename)
+                if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
+                    message = "An error occurred writing to the file: %s" %(path_to_output_file)
+        else:
+            bdata = ""
+            if (self.__count > 0):
+                bdata += generate_table(["Filesystem", "Snapshots", "Start Time", "Stop Time"],
+                                       [[self.get_filesystem_name(), str(self.__count), self.__start_time,
+                                         self.__stop_time]], title="Snapshots Taken",
+                                        description="The number of snapshots taken and the time that first and the last snapshot taken.")
+
+            if (self.__dlm_activity):
+                bdata += generate_table(["Filesystem", "Snapshot Time", "Number of DLM Waiters"],
+                                        self.__dlm_activity, title="DLM Waiter Count",
+                                        description="The number of DLM waiters for a snapshot. Only snapshots with DLM waiter count higher than 0 displayed.")
+                                        
+            #if (self.__count > 0):
+            if (bdata):
+                wdata = "%s\n%s\n%s" %(generate_table_header(), bdata, generate_footer())
+                print wdata
+                filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
+                path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                             self.get_filesystem_name()), filename)
-            if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
-                message = "An error occurred writing to the file: %s" %(path_to_output_file)
-                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+                if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
+                    message = "An error occurred writing to the file: %s" %(path_to_output_file)
