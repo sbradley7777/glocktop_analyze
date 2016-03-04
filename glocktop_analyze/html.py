@@ -26,17 +26,31 @@ def generate_table_header():
     style += "padding: 5px;\n"
     style += "text-align: left;\n"
     style += "}\n"
+
     style += "table#t01 {\n"
     style += "width: 100%;\n"
-    style += "    background-color: #f1f1c1;\n"
+    #style += "    background-color: #f1f1c1;\n"
     style += "}\n"
+
+    style += "table#t01 tr:nth-child(even) {\n"
+    style += "background-color: #eee;\n"
+    style += "}\n"
+
+    style += "table#t01 tr:nth-child(odd) {\n"
+    style += "background-color:#fff;\n"
+    style += "}\n"
+
+    style += "table#t01 th{\n"
+    style += "background-color: black;\n"
+    style += "color: white;\n"
+    style += "}\n"
+
     style += "</style>\n"
     header_pre = "<html>\n\t<head>\n"
     header_post = "</head>\n\t<body>\n"
     return "%s%s%s" %(header_pre, style, header_post)
 
 def generate_table(header, table, title="", description="", caption=""):
-    # Need alternating color via CSS on rows.
     if (not table):
         return ""
     htable = ""
