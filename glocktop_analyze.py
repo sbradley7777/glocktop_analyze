@@ -15,7 +15,7 @@
 
 
 Current TODO:
-* Setup plugin for stats. 
+* Setup plugin for stats.
 * Need to add note about minimums. Like mimimum times a pid shows up in
   snapshots that is require to print/write. A couple places like this.
   Need like a footer to write to output.
@@ -414,6 +414,7 @@ if __name__ == "__main__":
             if (not cmdline_opts.disable_std_out):
                 snapshots_stats.console()
             snapshots_stats.write()
+            snapshots_stats.write(html_format=True)
             warnings = merge_dicts(warnings, snapshots_stats.get_warnings())
 
             glocks_high_demote_secs_stats = GlocksHighDemoteSeconds(snapshots, path_to_output_dir)
