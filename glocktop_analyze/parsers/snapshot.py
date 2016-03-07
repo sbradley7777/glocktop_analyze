@@ -20,7 +20,7 @@ import glocktop_analyze.glocks_stats
 from glocktop_analyze.parsers.glock import parse_glock,parse_glock_holder
 from glocktop_analyze.parsers.glocks_stats import parse_glocks_stats
 
-def parse_snapshot(line, ignore_ended_processes=False):
+def parse_snapshot(line, show_ended_process_and_tlocks=False):
     days_regex = "(?P<day>%s)" % '|'.join(calendar.day_abbr[0:])
     months_regex = "(?P<month>%s)" % '|'.join(calendar.month_abbr[1:])
     dow_regex = "(?P<dow>\d{1,2})"
@@ -53,7 +53,7 @@ def parse_snapshot(line, ignore_ended_processes=False):
                 dlm_activity = DLMActivity(int(mo_dlm.group("dlm_dirtbl_size")), int(mo_dlm.group("dlm_rsbtbl_size")),
                                            int(mo_dlm.group("dlm_lkbtbl_size")), len(mo_dlm.group("dlm_activity")))
 
-        return Snapshot(mo.group("filesystem"), hostname, date_time, dlm_activity, ignore_ended_processes)
+        return Snapshot(mo.group("filesystem"), hostname, date_time, dlm_activity, show_ended_process_and_tlocks)
     return None
 
 def process_snapshot(snapshot, snapshot_lines):

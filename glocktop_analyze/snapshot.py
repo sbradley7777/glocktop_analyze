@@ -10,12 +10,12 @@ from glocktop_analyze.glock import Glock
 
 class Snapshot():
     # A collection of glocks for a filesystem at a specific time.
-    def __init__(self, filesystem_name, hostname, date_time, dlm_activity = None, ignore_ended_process_and_tlocks=False):
+    def __init__(self, filesystem_name, hostname, date_time, dlm_activity = None, show_ended_process_and_tlocks=False):
         self.__filesystem_name = filesystem_name
         self.__hostname = hostname
         self.__date_time = date_time
         self.__dlm_activity = dlm_activity
-        self.__ignore_ended_process_and_tlocks = ignore_ended_process_and_tlocks
+        self.__show_ended_process_and_tlocks = show_ended_process_and_tlocks
 
         self.__glocks = []
         self.__glocks_stats = None
@@ -40,7 +40,7 @@ class Snapshot():
         self.__glocks.append(glock)
 
     def get_glocks(self):
-        if (self.__ignore_ended_process_and_tlocks):
+        if (not self.__show_ended_process_and_tlocks):
             glocks_not_ended_process = []
             for g in self.__glocks:
                 if (not ((g.has_ended_process()) or (g.get_type() == 1))):
