@@ -351,6 +351,14 @@ def mkdirs(path_to_dir):
     return os.path.isdir(path_to_dir)
 
 def write_to_file(path_to_filename, data, append_to_file=True, create_file=False):
+    filename, filename_extension = os.path.splitext(path_to_filename)
+    if (filename_extension == ".html"):
+        import pkgutil
+        if (not pkgutil.find_loader("bs4") == None):
+            from bs4 import BeautifulSoup, Tag
+            soup = BeautifulSoup(data, 'html.parser')
+            data = soup.prettify()
+
     [parent_dir, filename] = os.path.split(path_to_filename)
     if (mkdirs(parent_dir)):
         if (os.path.isfile(path_to_filename) or create_file):
