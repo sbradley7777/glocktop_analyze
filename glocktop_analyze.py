@@ -40,12 +40,12 @@ from glocktop_analyze.glock import Glock, GlockHolder, GlockObject
 from glocktop_analyze.glocks_stats import GlocksStats, GlockStat
 from glocktop_analyze.parsers.snapshot import parse_snapshot, process_snapshot
 
-from glocktop_analyze.stats.glocks_stats import GSStats
-from glocktop_analyze.stats.snapshots import Snapshots
-from glocktop_analyze.stats.glocks_high_demote_seconds import GlocksHighDemoteSeconds
-from glocktop_analyze.stats.glocks_in_snapshots import GlocksInSnapshots
-from glocktop_analyze.stats.glocks_waiters_time import GlocksWaitersTime
-from glocktop_analyze.stats.pids import Pids
+from glocktop_analyze.plugins.glocks_stats import GSStats
+from glocktop_analyze.plugins.snapshots import Snapshots
+from glocktop_analyze.plugins.glocks_high_demote_seconds import GlocksHighDemoteSeconds
+from glocktop_analyze.plugins.glocks_in_snapshots import GlocksInSnapshots
+from glocktop_analyze.plugins.glocks_waiters_time import GlocksWaitersTime
+from glocktop_analyze.plugins.pids import Pids
 
 # #####################################################################
 # Global vars:

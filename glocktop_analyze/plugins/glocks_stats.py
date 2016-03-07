@@ -4,21 +4,21 @@ import logging.handlers
 import os.path
 
 import glocktop_analyze
-from glocktop_analyze.stats import Stats
+from glocktop_analyze.plugins import Plugin
+from glocktop_analyze.plugins import generate_date_graphs
 from glocktop_analyze.glocks_stats import GlocksStats, GlockStat, GLOCK_TYPES
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
-from glocktop_analyze.stats import generate_date_graphs
 from glocktop_analyze.html import generate_graph_index_page
 from glocktop_analyze.html import generate_table_header, generate_table
 from glocktop_analyze.html import generate_footer
 
-class GSStats(Stats):
+class GSStats(Plugin):
     def __init__(self, snapshots, path_to_output_dir):
         snapshots_with_stats = []
         for snapshot in snapshots:
             if (not snapshot.get_glocks_stats() == None):
                 snapshots_with_stats.append(snapshot)
-        Stats.__init__(self, snapshots_with_stats, "Glocks Stats", path_to_output_dir)
+        Plugin.__init__(self, snapshots_with_stats, "Glocks Stats", path_to_output_dir)
 
     def __generate_graphs_by_glock_type(self, png_format=False):
         path_to_output_dir = os.path.join(os.path.join(self.get_path_to_output_dir(),

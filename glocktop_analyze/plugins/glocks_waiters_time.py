@@ -6,13 +6,13 @@ from operator import itemgetter
 from collections import OrderedDict
 
 import glocktop_analyze
-from glocktop_analyze.stats import Stats
-from glocktop_analyze.stats import generate_date_graphs
+from glocktop_analyze.plugins import Plugin
+from glocktop_analyze.plugins import generate_date_graphs
 from glocktop_analyze.html import generate_graph_index_page
 
-class GlocksWaitersTime(Stats):
+class GlocksWaitersTime(Plugin):
     def __init__(self, snapshots, path_to_output_dir):
-        Stats.__init__(self, snapshots, "Glocks Holder and Waiters Count over Time", path_to_output_dir)
+        Plugin.__init__(self, snapshots, "Glocks Holder and Waiters Count over Time", path_to_output_dir)
         self.__glocks_holder_waiters_by_date = {}
 
     def __encode(self, glock_type, glock_inode):

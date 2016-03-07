@@ -4,14 +4,14 @@ import logging.handlers
 import os.path
 
 import glocktop_analyze
-from glocktop_analyze.stats import Stats
+from glocktop_analyze.plugins import Plugin
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
 from glocktop_analyze.html import generate_table_header, generate_table
 from glocktop_analyze.html import generate_footer
 
-class GlocksHighDemoteSeconds(Stats):
+class GlocksHighDemoteSeconds(Plugin):
     def __init__(self, snapshots, path_to_output_dir):
-        Stats.__init__(self, snapshots, "Glocks with High Demote Seconds", path_to_output_dir)
+        Plugin.__init__(self, snapshots, "Glocks with High Demote Seconds", path_to_output_dir)
         self.__table = []
 
 

@@ -24,7 +24,7 @@ except (ImportError, NameError):
 # #######################################################################
 # Classes
 # #######################################################################
-class Stats(object):
+class Plugin(object):
     def __init__(self, snapshots, title, path_to_output_dir):
         # A list of snapshots of a particular filesystem.
         self.__snapshots = snapshots
