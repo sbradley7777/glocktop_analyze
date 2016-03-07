@@ -18,11 +18,11 @@ class Glock():
         self.__glock_object = None
 
     def __str__(self):
-        return "(%s/%s) state: %s | demote_time: %sms | hw count: %d" %(self.get_type(),
-                                                                        self.get_inode(),
-                                                                        self.get_state(),
-                                                                        self.get_demote_time(),
-                                                                        len(self.get_holders()))
+        return "G: (%s/%s) state: %s | demote_time: %sms | hw count: %d" %(self.get_type(),
+                                                                           self.get_inode(),
+                                                                           self.get_state(),
+                                                                           self.get_demote_time(),
+                                                                           len(self.get_holders()))
 
     def get_type(self):
         return self.__type

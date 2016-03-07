@@ -105,22 +105,6 @@ def __get_options(version) :
                          dest="show_ended_process_and_tlocks",
                          help="show all glocks for ended process and transaction locks",
                          default=False)
-    cmd_parser.add_option("-W", "--disable_show_waiters",
-                          action="store_true",
-                          dest="disable_show_waiters",
-                          help="the waiters for the glocks are not displayed in the output",
-                          default=False)
-    # I think stats should have option to enable or disable.
-    #cmd_parser.add_option("-S", "--disable_stats",
-    #                      action="store_true",
-    #                      dest="disable_stats",
-    #                      help="do not print stats",
-    #                      default=False)
-    #cmd_parser.add_option("-C", "--disable_call_trace",
-    #                      action="store_true",
-    #                      dest="disable_call_trace",
-    #                      help="do not print call traces for holder/waiters",
-    #                      default=False)
     try:
         import pkgutil
         if (not pkgutil.find_loader("pygal") == None):
@@ -134,6 +118,17 @@ def __get_options(version) :
         message = "Failed to find pygal. The python-pygal package needs to be installed."
         logging.getLogger(MAIN_LOGGER_NAME).error(message)
 
+    """
+    cmd_parser.add_option("-S", "--disable_stats",
+                           action="store_true",
+                           dest="disable_stats",
+                           help="do not print stats",
+                           default=False)
+    cmd_parser.add_option("-C", "--disable_call_trace",
+                           action="store_true",
+                           dest="disable_call_trace",
+                           help="do not print call traces for holder/waiters",
+                           default=False)
     cmd_parser.add_option("-g", "--find_glock",
                           action="store",
                           dest="glock_inode",
@@ -148,7 +143,7 @@ def __get_options(version) :
                           type="int",
                           metavar="<glock type>",
                           default=None)
-
+    """
  # Get the options and return the result.
     (cmdLine_opts, cmdLine_args) = cmd_parser.parse_args()
     return (cmdLine_opts, cmdLine_args)
@@ -218,14 +213,15 @@ if __name__ == "__main__":
             message ="The file does not exist: %s" %(cmdline_opts.path_to_src_file)
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
             sys.exit(1)
-        if (not cmdline_opts.glock_type == None):
-            if (not (0 < cmdline_opts.glock_type < 10)):
-                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error("The glock type (-G) must be an integer between 1 - 9.")
-                sys.exit(1)
         if (not cmdline_opts.minimum_waiter_count > 0):
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error("The minimum holder count for a glock (-m) must be a positive integer.")
             sys.exit(1)
 
+        """
+        if (not cmdline_opts.glock_type == None):
+            if (not (0 < cmdline_opts.glock_type < 10)):
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error("The glock type (-G) must be an integer between 1 - 9.")
+                sys.exit(1)
         glock_inode = ""
         if (cmdline_opts.glock_inode):
             try:
@@ -239,7 +235,7 @@ if __name__ == "__main__":
             except TypeError:
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error("The glock number (-g) must be a hexadecimal number.")
                 sys.exit(1)
-
+        """
         # #######################################################################
         # Run main
         # #######################################################################
@@ -301,29 +297,22 @@ if __name__ == "__main__":
             for snapshot in snapshots:
                 hostname = snapshot.get_hostname()
                 current_summary = ""
-                glocks = []
-                if (cmdline_opts.glock_inode):
-                    # Find particular glocks.
-                    glocks = snapshot.find_glock(cmdline_opts.glock_type, cmdline_opts.glock_inode.replace("0x", ""))
-                else:
-                    glocks = snapshot.get_glocks()
-
+                glocks = snapshot.get_glocks()
                 for glock in glocks:
                     glock_holders = glock.get_holders()
                     if (len(glock_holders) >= cmdline_opts.minimum_waiter_count):
                         current_summary += "  %s\n" %(glock)
-                        if (not cmdline_opts.disable_show_waiters):
-                            for holder in glock_holders:
-                                current_summary += "    %s\n" %(holder)
-                            if (not glock.get_glock_object() == None):
-                                current_summary += "    %s\n" %(glock.get_glock_object())
+                        for holder in glock_holders:
+                            current_summary += "     %s\n" %(holder)
+                        if (not glock.get_glock_object() == None):
+                            current_summary += "     %s\n" %(glock.get_glock_object())
                     if (current_summary):
                         glocktop_summary_console += "%s\n%s\n" %(ColorizeConsoleText.red(str(snapshot)), current_summary)
                         glocktop_summary_file += "%s\n%s\n" %(str(snapshot), current_summary)
             if (glocktop_summary_console and not cmdline_opts.disable_std_out):
                 print "%s\n" %(glocktop_summary_console.rstrip())
             if (glocktop_summary_console):
-                path_to_output_file = os.path.join(os.path.join(path_to_output_dir, filesystem_name), "glocktop_summary.txt")
+                path_to_output_file = os.path.join(os.path.join(path_to_output_dir, filesystem_name), "glocks_activity.txt")
                 if (not write_to_file(path_to_output_file, glocktop_summary_file,
                                       append_to_file=False, create_file=True)):
                     message = "An error occurred writing the glocktop summary file: %s" %(path_to_glocktop_summary_file)
