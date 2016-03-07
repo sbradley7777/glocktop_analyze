@@ -26,9 +26,9 @@ Current TODO:
 * The glocktop summary needs to be done in html.
 * Have a html table style for rotating the color of table rows when the first
   item starts with "-" and not odd/even approach.
-* Dont do formatting in stats.glocks_stats analyze() code, do in write() cause need
-  table for html output. SO need to do like oother stats.
-
+* Include support for some type of pretty way to format the html before
+  writing. If need to use 3rd party lib and just check if exists. If so then
+  pretty print html.
 
 RFEs:
 * Setup plugin for stats.

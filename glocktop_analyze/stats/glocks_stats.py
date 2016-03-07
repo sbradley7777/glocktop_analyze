@@ -5,10 +5,12 @@ import os.path
 
 import glocktop_analyze
 from glocktop_analyze.stats import Stats
-from glocktop_analyze.glocks_stats import GlocksStats, GlockStat
+from glocktop_analyze.glocks_stats import GlocksStats, GlockStat, GLOCK_TYPES
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
 from glocktop_analyze.stats import generate_date_graphs
 from glocktop_analyze.html import generate_graph_index_page
+from glocktop_analyze.html import generate_table_header, generate_table
+from glocktop_analyze.html import generate_footer
 
 class GSStats(Stats):
     def __init__(self, snapshots, path_to_output_dir):
@@ -17,8 +19,6 @@ class GSStats(Stats):
             if (not snapshot.get_glocks_stats() == None):
                 snapshots_with_stats.append(snapshot)
         Stats.__init__(self, snapshots_with_stats, "Glocks Stats", path_to_output_dir)
-        self.__console_summary = ""
-        self.__file_summary = ""
 
     def __generate_graphs_by_glock_type(self, png_format=False):
         path_to_output_dir = os.path.join(os.path.join(self.get_path_to_output_dir(),
@@ -77,28 +77,51 @@ class GSStats(Stats):
             return path_to_image_files
 
     def analyze(self):
+        pass
+
+    def console(self):
+        console_summary = ""
         filesystem_name = self.get_filesystem_name()
         for snapshot in self.get_snapshots():
             glocks_stats = snapshot.get_glocks_stats()
-            self.__file_summary +=  "Glock stats at %s for filesystem: " %(glocks_stats.get_date_time().strftime("%Y-%m-%d %H:%M:%S"))
-            self.__file_summary += "%s\n%s\n\n" %(filesystem_name, str(glocks_stats))
             formatted_table = tableize(glocks_stats.get_table(), ["Glock States"] +
                                        glocktop_analyze.glocks_stats.GLOCK_STATES, colorize=True).rstrip()
-            self.__console_summary += "Glock stats at %s for filesystem: " %(ColorizeConsoleText.orange(
+            console_summary += "Glock stats at %s for filesystem: " %(ColorizeConsoleText.orange(
                 glocks_stats.get_date_time().strftime("%Y-%m-%d %H:%M:%S")))
-            self.__console_summary += "%s\n%s\n\n" %(ColorizeConsoleText.orange(
+            console_summary += "%s\n%s\n\n" %(ColorizeConsoleText.orange(
                 filesystem_name), formatted_table)
-
-    def console(self):
-        if (self.__console_summary):
-            print "%s\n" %(self.__console_summary.rstrip())
+        if (console_summary):
+            print "%s\n" %(console_summary.rstrip())
 
     def write(self, html_format=False):
-        if (self.__file_summary):
+        file_summary = ""
+        filesystem_name = self.get_filesystem_name()
+        filename = ""
+
+        if (not html_format):
             filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
+            for snapshot in self.get_snapshots():
+                glocks_stats = snapshot.get_glocks_stats()
+                file_summary +=  "Glock stats at %s for filesystem: " %(glocks_stats.get_date_time().strftime("%Y-%m-%d %H:%M:%S"))
+                file_summary += "%s\n%s\n\n" %(filesystem_name, str(glocks_stats))
+        else:
+            bdata = ""
+            filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
+            for snapshot in self.get_snapshots():
+                glocks_stats = snapshot.get_glocks_stats()
+                title =  "Glock stats at %s for filesystem: %s" %(glocks_stats.get_date_time().strftime("%Y-%m-%d %H:%M:%S"),
+                                                                   filesystem_name)
+                bdata += generate_table(glocks_stats.get_table(),
+                                        ["-"] + GLOCK_TYPES,
+                                        title=title,
+                                        description="")
+            if (bdata):
+                file_summary = "%s\n%s\n%s" %(generate_table_header(), bdata, generate_footer())
+
+        if (file_summary):
             path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                             self.get_filesystem_name()), filename)
-            if (not write_to_file(path_to_output_file, self.__file_summary, append_to_file=False, create_file=True)):
+            if (not write_to_file(path_to_output_file, file_summary, append_to_file=False, create_file=True)):
                 message = "An error occurred writing to the file: %s" %(path_to_output_file)
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
 
