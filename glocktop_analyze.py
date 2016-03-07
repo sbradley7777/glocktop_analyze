@@ -274,7 +274,6 @@ if __name__ == "__main__":
             else:
                 snapshot_lines.append(line)
 
-
         # The path to directory where all files written for this host will be
         # written.
         path_to_output_dir = cmdline_opts.path_to_output_dir
@@ -331,31 +330,13 @@ if __name__ == "__main__":
                     logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
 
         # #######################################################################
-        # Gather, print, and graph  stats
+        # Gather, print, and graph stats
         # #######################################################################
         # svg does better charts. png support requires the python files:
-        # lxml, cairosvg, tinycss, cssselect
-        #enable_png_format=True
-        #libs_required_for_png_support = ["cssselect", "cairosvg"]
-        #import pkgutil
-        #for lib in libs_required_for_png_support:
-        #    try:
-        #        if (pkgutil.find_loader(lib) == None):
-        #            enable_png_format = False
-        #    except (ImportError, NameError):
-        #        message = "Failed to find import packages needed for png support: %s." %(lib)
-        #        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
-        #        enable_png_format = False
-        #print enable_png_format
-
-        # For now keep it disabled.
+        # lxml, cairosvg, tinycss, cssselect For now png support is disabled.
         enable_png_format=False
 
-        # See if way to make this work like a plugin instead of having to import
-        # then run. Just run them all like sos.
-
-        # Attribute error is thrown and silently caught if graphing is disable
-        # because the require packages are not installed.
+        # A function to merge dictionaries.
         def merge_dicts(dict_org, dict_to_merge):
             if (not dict_to_merge):
                 return dict_org
@@ -369,55 +350,32 @@ if __name__ == "__main__":
                         value_org.append(value)
             return dict_org
 
-        warnings = {}
+        # Loop over all the filesystems and plugins.
         for filesystem_name in snapshots_by_filesystem.keys():
+            # A container for all the warnings found on the filesystem.
+            warnings = {}
             snapshots = snapshots_by_filesystem.get(filesystem_name)
-            gsstats_stats = GSStats(snapshots, path_to_output_dir)
-            gsstats_stats.analyze()
-            if (not cmdline_opts.disable_std_out):
-                gsstats_stats.console()
-            gsstats_stats.write(html_format=True)
-            try:
-                if (not cmdline_opts.disable_graphs):
-                    gsstats_stats.graph(enable_png_format)
-            except AttributeError:
-                pass
-            warnings =  merge_dicts(warnings, gsstats_stats.get_warnings())
-
-            snapshots_stats = Snapshots(snapshots, path_to_output_dir)
-            snapshots_stats.analyze()
-            if (not cmdline_opts.disable_std_out):
-                snapshots_stats.console()
-            snapshots_stats.write(html_format=True)
-            warnings = merge_dicts(warnings, snapshots_stats.get_warnings())
-
-            glocks_high_demote_secs_stats = GlocksHighDemoteSeconds(snapshots, path_to_output_dir)
-            glocks_high_demote_secs_stats.analyze()
-            if (not cmdline_opts.disable_std_out):
-                glocks_high_demote_secs_stats.console()
-            glocks_high_demote_secs_stats.write(html_format=True)
-            warnings = merge_dicts(warnings, glocks_high_demote_secs_stats.get_warnings())
-
-            glocks_in_snapshots_stats = GlocksInSnapshots(snapshots, path_to_output_dir)
-            glocks_in_snapshots_stats.analyze()
-            if (not cmdline_opts.disable_std_out):
-                glocks_in_snapshots_stats.console()
-            glocks_in_snapshots_stats.write(html_format=True)
-            try:
-                if (not cmdline_opts.disable_graphs):
-                    glocks_waiters_time = GlocksWaitersTime(snapshots, path_to_output_dir)
-                    glocks_waiters_time.analyze()
-                    glocks_waiters_time.graph(enable_png_format)
-            except AttributeError:
-                pass
-            warnings = merge_dicts(warnings, glocks_in_snapshots_stats.get_warnings())
-
-            pids_stats = Pids(snapshots, path_to_output_dir)
-            pids_stats.analyze()
-            if (not cmdline_opts.disable_std_out):
-                pids_stats.console()
-            pids_stats.write(html_format=True)
-            warnings = merge_dicts(warnings, pids_stats.get_warnings())
+            # See if way to make this work like a plugin instead of having to
+            # import then run. Just run them all like sos. Attribute error is
+            # thrown and silently caught if graphing is disabled because the
+            # require packages are not installed. For now we hardcode
+            # everything.
+            plugins = [GSStats(snapshots, path_to_output_dir),
+                       Snapshots(snapshots, path_to_output_dir),
+                       GlocksHighDemoteSeconds(snapshots, path_to_output_dir),
+                       GlocksInSnapshots(snapshots, path_to_output_dir),
+                       Pids(snapshots, path_to_output_dir)]
+            for plugin in plugins:
+                plugin.analyze()
+                plugin.write(html_format=True)
+                if (not cmdline_opts.disable_std_out):
+                    plugin.console()
+                try:
+                    if (not cmdline_opts.disable_graphs):
+                        plugin.graph(enable_png_format)
+                except AttributeError:
+                    pass
+                warnings =  merge_dicts(warnings, plugin.get_warnings())
 
             warnings_str = ""
             for wkey in warnings.keys():
