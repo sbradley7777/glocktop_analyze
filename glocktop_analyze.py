@@ -15,8 +15,13 @@ output can be printed as html format and data can be graphed.
 @version   : 0.1
 @copyright : GPLv3
 
+Requirements:
 * For pretty formatted html then install the package "python-beautifulsoup4"
   otherwise there will be ugly html created.
+* For graph support they package: pygal is required.
+* png support will require the following packages but is currently disabled:
+  lxml, cairosvg, tinycss, cssselect
+
 """
 import sys
 import logging
@@ -40,6 +45,8 @@ from glocktop_analyze.glock import Glock, GlockHolder, GlockObject
 from glocktop_analyze.glocks_stats import GlocksStats, GlockStat
 from glocktop_analyze.parsers.snapshot import parse_snapshot, process_snapshot
 
+
+from glocktop_analyze.plugins.glocks_activity import GlocksActivity
 from glocktop_analyze.plugins.glocks_stats import GSStats
 from glocktop_analyze.plugins.snapshots import Snapshots
 from glocktop_analyze.plugins.glocks_high_demote_seconds import GlocksHighDemoteSeconds
@@ -86,13 +93,6 @@ def __get_options(version) :
                          type="string",
                          metavar="<input filename>",
                           default="/tmp/%s" %(cmd_parser.get_command_name().split(".")[0]))
-    cmd_parser.add_option("-m", "--minimum_waiter_count",
-                          action="store",
-                          dest="minimum_waiter_count",
-                          help="the minimum number of waiters for a glock",
-                          type="int",
-                          metavar="<minimum waiter count>",
-                          default=1)
     cmd_parser.add_option("-n", "--gfs2_filesystem_name",
                           action="extend",
                           dest="gfs2_filesystem_names",
@@ -119,6 +119,13 @@ def __get_options(version) :
         logging.getLogger(MAIN_LOGGER_NAME).error(message)
 
     """
+    cmd_parser.add_option("-m", "--minimum_waiter_count",
+                          action="store",
+                          dest="minimum_waiter_count",
+                          help="the minimum number of waiters for a glock",
+                          type="int",
+                          metavar="<minimum waiter count>",
+                          default=1)
     cmd_parser.add_option("-S", "--disable_stats",
                            action="store_true",
                            dest="disable_stats",
@@ -213,11 +220,11 @@ if __name__ == "__main__":
             message ="The file does not exist: %s" %(cmdline_opts.path_to_src_file)
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
             sys.exit(1)
+
+        """
         if (not cmdline_opts.minimum_waiter_count > 0):
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error("The minimum holder count for a glock (-m) must be a positive integer.")
             sys.exit(1)
-
-        """
         if (not cmdline_opts.glock_type == None):
             if (not (0 < cmdline_opts.glock_type < 10)):
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error("The glock type (-G) must be an integer between 1 - 9.")
@@ -287,42 +294,9 @@ if __name__ == "__main__":
         logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
 
         # #######################################################################
-        # Analyze the data
+        # Analyze, print, write, and graph stats
         # #######################################################################
-        glocktop_summary_console = ""
-        glocktop_summary_file = ""
-        hostname = ""
-        for filesystem_name in snapshots_by_filesystem.keys():
-            snapshots = snapshots_by_filesystem.get(filesystem_name)
-            for snapshot in snapshots:
-                hostname = snapshot.get_hostname()
-                current_summary = ""
-                glocks = snapshot.get_glocks()
-                for glock in glocks:
-                    glock_holders = glock.get_holders()
-                    if (len(glock_holders) >= cmdline_opts.minimum_waiter_count):
-                        current_summary += "  %s\n" %(glock)
-                        for holder in glock_holders:
-                            current_summary += "     %s\n" %(holder)
-                        if (not glock.get_glock_object() == None):
-                            current_summary += "     %s\n" %(glock.get_glock_object())
-                    if (current_summary):
-                        glocktop_summary_console += "%s\n%s\n" %(ColorizeConsoleText.red(str(snapshot)), current_summary)
-                        glocktop_summary_file += "%s\n%s\n" %(str(snapshot), current_summary)
-            if (glocktop_summary_console and not cmdline_opts.disable_std_out):
-                print "%s\n" %(glocktop_summary_console.rstrip())
-            if (glocktop_summary_console):
-                path_to_output_file = os.path.join(os.path.join(path_to_output_dir, filesystem_name), "glocks_activity.txt")
-                if (not write_to_file(path_to_output_file, glocktop_summary_file,
-                                      append_to_file=False, create_file=True)):
-                    message = "An error occurred writing the glocktop summary file: %s" %(path_to_glocktop_summary_file)
-                    logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
-
-        # #######################################################################
-        # Gather, print, and graph stats
-        # #######################################################################
-        # svg does better charts. png support requires the python files:
-        # lxml, cairosvg, tinycss, cssselect For now png support is disabled.
+        # svg does better charts than png
         enable_png_format=False
 
         # A function to merge dictionaries.
@@ -349,7 +323,8 @@ if __name__ == "__main__":
             # thrown and silently caught if graphing is disabled because the
             # require packages are not installed. For now we hardcode
             # everything.
-            plugins = [GSStats(snapshots, path_to_output_dir),
+            plugins = [GlocksActivity(snapshots, path_to_output_dir),
+                       GSStats(snapshots, path_to_output_dir),
                        Snapshots(snapshots, path_to_output_dir),
                        GlocksHighDemoteSeconds(snapshots, path_to_output_dir),
                        GlocksInSnapshots(snapshots, path_to_output_dir),

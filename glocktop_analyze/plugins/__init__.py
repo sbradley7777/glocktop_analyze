@@ -41,6 +41,11 @@ class Plugin(object):
     def get_path_to_output_dir(self):
         return self.__path_to_output_dir
 
+    def get_hostname(self):
+        if (self.__snapshots):
+            return self.__snapshots[0].get_hostname()
+        return ""
+
     def get_filesystem_name(self):
         if (self.__snapshots):
             return self.__snapshots[0].get_filesystem_name()
@@ -51,7 +56,7 @@ class Plugin(object):
             self.__warnings[wtype] = []
         self.__warnings[wtype].append(description)
 
-    def analayze(self):
+    def analyze(self):
         pass
 
     def get_warnings(self):

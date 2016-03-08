@@ -76,9 +76,6 @@ class GSStats(Plugin):
                                                             png_format=png_format)
             return path_to_image_files
 
-    def analyze(self):
-        pass
-
     def console(self):
         console_summary = ""
         filesystem_name = self.get_filesystem_name()
