@@ -65,33 +65,33 @@ VERSION_NUMBER = "0.1-5"
 def __get_options(version) :
     cmd_parser = OptionParserExtended(version)
     cmd_parser.add_option("-d", "--debug",
-                         action="store_true",
-                         dest="enableDebugLogging",
-                         help="enables debug logging",
-                         default=False)
+                          action="store_true",
+                          dest="enableDebugLogging",
+                          help="enables debug logging",
+                          default=False)
     cmd_parser.add_option("-q", "--quiet",
-                         action="store_true",
-                         dest="disable_std_out",
-                         help="disables logging to console",
-                         default=False)
+                          action="store_true",
+                          dest="disable_std_out",
+                          help="disables logging to console",
+                          default=False)
     cmd_parser.add_option("-y", "--no_ask",
-                        action="store_true",
-                         dest="disableQuestions",
-                         help="disables all questions and assumes yes",
-                         default=False)
+                          action="store_true",
+                          dest="disableQuestions",
+                          help="disables all questions and assumes yes",
+                          default=False)
     cmd_parser.add_option("-p", "--path_to_filename",
-                         action="store",
-                         dest="path_to_src_file",
-                         help="the path to the filename that will be parsed",
-                         type="string",
-                         metavar="<input filename>",
-                         default="")
+                          action="extend",
+                          dest="path_to_src_file",
+                          help="the path to the filename that will be parsed or directory containing glocktop files",
+                          type="string",
+                          metavar="<input filename>",
+                          default=[])
     cmd_parser.add_option("-o", "--path_to_output_dir",
-                         action="store",
-                         dest="path_to_output_dir",
-                         help="the path to the directory where any files generated will be outputted",
-                         type="string",
-                         metavar="<input filename>",
+                          action="store",
+                          dest="path_to_output_dir",
+                          help="the path to the directory where any files generated will be outputted",
+                          type="string",
+                          metavar="<input filename>",
                           default="/tmp/%s" %(cmd_parser.get_command_name().split(".")[0]))
     cmd_parser.add_option("-n", "--gfs2_filesystem_name",
                           action="extend",
@@ -101,10 +101,10 @@ def __get_options(version) :
                           metavar="<gfs2 filesystem name>",
                           default=[])
     cmd_parser.add_option("-I", "--show_ended_process_and_tlocks",
-                        action="store_true",
-                         dest="show_ended_process_and_tlocks",
-                         help="show all glocks for ended process and transaction locks",
-                         default=False)
+                          action="store_true",
+                          dest="show_ended_process_and_tlocks",
+                          help="show all glocks for ended process and transaction locks",
+                          default=False)
     try:
         import pkgutil
         if (not pkgutil.find_loader("pygal") == None):
@@ -210,15 +210,44 @@ if __name__ == "__main__":
         if ((cmdline_opts.enableDebugLogging) and (not cmdline_opts.disable_std_out)):
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).setLevel(logging.DEBUG)
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug("Debugging has been enabled.")
+
+        # Find all the valid glocktop files that were specified.
+        message ="The file will be analyzed: %s" %(cmdline_opts.path_to_src_file)
+        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+
         # #######################################################################
-        # Validate input
+        # Get the listing of all the files that will be processed.
         # #######################################################################
-        if (not cmdline_opts.path_to_src_file):
-            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error("A path to a file (-p) to be analyzed is required.")
-            sys.exit(1)
-        if (not os.path.exists(cmdline_opts.path_to_src_file)):
-            message ="The file does not exist: %s" %(cmdline_opts.path_to_src_file)
+        def is_valid_glocktop_file(path_to_filename):
+            try:
+                fin = open(path_to_filename)
+                for line in fin.readlines()[0:10]:
+                    if (line.startswith("@")):
+                        if (not parse_snapshot(line) == None):
+                            return True
+            except (UnicodeEncodeError, IOError):
+                return False
+            return False
+
+        path_to_filenames = []
+        for filename in cmdline_opts.path_to_src_file:
+            if (os.path.isfile(filename)):
+                if (is_valid_glocktop_file(filename)):
+                    path_to_filenames.append(filename)
+            elif (os.path.isdir(filename)):
+                for item in os.listdir(filename):
+                    path_to_filename = os.path.join(filename, item)
+                    if (is_valid_glocktop_file(path_to_filename)):
+                        path_to_filenames.append(path_to_filename)
+                    else:
+                        message = "The file does not appear to contain data generated by glocktop: %s" %(path_to_filename)
+                        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).warning(message)
+
+        if (not path_to_filenames):
+            message = "There was no valid glocktop outputted files found."
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
+            message = "A path to file or directory with the \"-p\" option that contains file(s) generated by glocktop is required."
+            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).info(message)
             sys.exit(1)
 
         """
@@ -244,116 +273,113 @@ if __name__ == "__main__":
                 sys.exit(1)
         """
         # #######################################################################
-        # Run main
+        # Analyze the files.
         # #######################################################################
-        message ="The file will be analyzed: %s" %(cmdline_opts.path_to_src_file)
-        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
-        # Get the data as a list of lines
-        lines = get_data_from_file(cmdline_opts.path_to_src_file)
+        for path_to_filename in path_to_filenames:
+            lines = get_data_from_file(path_to_filename)
+            #All the snapshots for all the filesystems.
+            snapshots_by_filesystem = {}
+            # The glock that will have a container for all the lines associated with
+            # the glock.
+            gfs2_snapshot = None
+            # The lines that are related to this snapshot of the
+            # filesystem. Including glocks, waiters, etc.
+            snapshot_lines = []
+            for line in lines:
+                # @, G, H, I, R, B, U, C, S
+                if ((line.startswith("@")) or (not len(line) > 0)):
+                    if (not gfs2_snapshot == None):
+                        # Process any previous snapshot lines before starting a
+                        # new one. All the glocks, holder/waiters, etc.
+                        if ((not cmdline_opts.gfs2_filesystem_names) or
+                            (gfs2_snapshot.get_filesystem_name().strip() in cmdline_opts.gfs2_filesystem_names)):
+                            process_snapshot(gfs2_snapshot, snapshot_lines)
+                            if (not snapshots_by_filesystem.has_key(gfs2_snapshot.get_filesystem_name())):
+                                snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()] = []
+                            snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()].append(gfs2_snapshot)
+                    # Process the new snapshot
+                    gfs2_snapshot = parse_snapshot(line, cmdline_opts.show_ended_process_and_tlocks)
+                    snapshot_lines = []
+                else:
+                    snapshot_lines.append(line)
 
-        #All the snapshots for all the filesystems.
-        snapshots_by_filesystem = {}
-        # The glock that will have a container for all the lines associated with
-        # the glock.
-        gfs2_snapshot = None
-        # The lines that are related to this snapshot of the
-        # filesystem. Including glocks, waiters, etc.
-        snapshot_lines = []
-        for line in lines:
-            # @, G, H, I, R, B, U, C, S
-            if ((line.startswith("@")) or (not len(line) > 0)):
-                if (not gfs2_snapshot == None):
-                    # Process any previous snapshot lines before starting a
-                    # new one. All the glocks, holder/waiters, etc.
-                    if ((not cmdline_opts.gfs2_filesystem_names) or
-                        (gfs2_snapshot.get_filesystem_name().strip() in cmdline_opts.gfs2_filesystem_names)):
-                        process_snapshot(gfs2_snapshot, snapshot_lines)
-                        if (not snapshots_by_filesystem.has_key(gfs2_snapshot.get_filesystem_name())):
-                            snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()] = []
-                        snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()].append(gfs2_snapshot)
-                # Process the new snapshot
-                gfs2_snapshot = parse_snapshot(line, cmdline_opts.show_ended_process_and_tlocks)
-                snapshot_lines = []
-            else:
-                snapshot_lines.append(line)
+            # The path to directory where all files written for this host will
+            # be written.
+            path_to_output_dir = cmdline_opts.path_to_output_dir
+            # Process any remaining items
+            if (not gfs2_snapshot == None):
+                if ((not cmdline_opts.gfs2_filesystem_names) or
+                    (gfs2_snapshot.get_filesystem_name().strip() in cmdline_opts.gfs2_filesystem_names)):
+                    process_snapshot(gfs2_snapshot, snapshot_lines)
+                    if (not snapshots_by_filesystem.has_key(gfs2_snapshot.get_filesystem_name())):
+                        snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()] = []
+                    snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()].append(gfs2_snapshot)
+                    # Set the path to output dir to include hostname in last item processed.
+                    path_to_output_dir = os.path.join(cmdline_opts.path_to_output_dir, gfs2_snapshot.get_hostname())
+            message ="The analyzing of the file is complete."
+            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
 
-        # The path to directory where all files written for this host will be
-        # written.
-        path_to_output_dir = cmdline_opts.path_to_output_dir
-        # Process any remaining items
-        if (not gfs2_snapshot == None):
-            if ((not cmdline_opts.gfs2_filesystem_names) or
-                (gfs2_snapshot.get_filesystem_name().strip() in cmdline_opts.gfs2_filesystem_names)):
-                process_snapshot(gfs2_snapshot, snapshot_lines)
-                if (not snapshots_by_filesystem.has_key(gfs2_snapshot.get_filesystem_name())):
-                    snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()] = []
-                snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()].append(gfs2_snapshot)
-                # Set the path to output dir to include hostname in last item processed.
-                path_to_output_dir = os.path.join(cmdline_opts.path_to_output_dir, gfs2_snapshot.get_hostname())
-        message ="The analyzing of the file is complete."
-        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+            # #######################################################################
+            # Analyze, print, write, and graph stats
+            # #######################################################################
+            # svg does better charts than png
+            enable_png_format=False
 
-        # #######################################################################
-        # Analyze, print, write, and graph stats
-        # #######################################################################
-        # svg does better charts than png
-        enable_png_format=False
-
-        # A function to merge dictionaries.
-        def merge_dicts(dict_org, dict_to_merge):
-            if (not dict_to_merge):
+            # A function to merge dictionaries.
+            def merge_dicts(dict_org, dict_to_merge):
+                if (not dict_to_merge):
+                    return dict_org
+                for key in dict_to_merge.keys():
+                    if (not dict_org.has_key(key) or dict_org == None):
+                        dict_org[key] = []
+                    value_org = dict_org[key]
+                    value_merge = dict_to_merge[key]
+                    for value in value_merge:
+                        if (not value in value_org):
+                            value_org.append(value)
                 return dict_org
-            for key in dict_to_merge.keys():
-                if (not dict_org.has_key(key) or dict_org == None):
-                    dict_org[key] = []
-                value_org = dict_org[key]
-                value_merge = dict_to_merge[key]
-                for value in value_merge:
-                    if (not value in value_org):
-                        value_org.append(value)
-            return dict_org
 
-        # Loop over all the filesystems and plugins.
-        for filesystem_name in snapshots_by_filesystem.keys():
-            # A container for all the warnings found on the filesystem.
-            warnings = {}
-            snapshots = snapshots_by_filesystem.get(filesystem_name)
-            # See if way to make this work like a plugin instead of having to
-            # import then run. Just run them all like sos. Attribute error is
-            # thrown and silently caught if graphing is disabled because the
-            # require packages are not installed. For now we hardcode
-            # everything.
-            plugins = [GlocksActivity(snapshots, path_to_output_dir),
-                       GSStats(snapshots, path_to_output_dir),
-                       Snapshots(snapshots, path_to_output_dir),
-                       GlocksHighDemoteSeconds(snapshots, path_to_output_dir),
-                       GlocksInSnapshots(snapshots, path_to_output_dir),
-                       Pids(snapshots, path_to_output_dir)]
-            for plugin in plugins:
-                plugin.analyze()
-                plugin.write(html_format=True)
-                if (not cmdline_opts.disable_std_out):
-                    plugin.console()
-                try:
-                    if (not cmdline_opts.disable_graphs):
-                        plugin.graph(enable_png_format)
-                except AttributeError:
-                    pass
-                warnings =  merge_dicts(warnings, plugin.get_warnings())
-
-            warnings_str = ""
-            for wkey in warnings.keys():
-            # Get the warnings that were found.
-                warnings_str += "%s\n" %(wkey)
-                for item in warnings.get(wkey):
-                    warnings_str += "\t%s\n" %(item)
-            if (warnings_str):
-                path_to_output_file = os.path.join(os.path.join(path_to_output_dir,
-                                                                filesystem_name),
-                                                   "warnings.txt")
-                if (not write_to_file(path_to_output_file, warnings_str, append_to_file=False, create_file=True)):
-                    message = "An error occurred writing the file: %s" %(path_to_output_file)
-                    logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+            # Loop over all the filesystems and plugins.
+            for filesystem_name in snapshots_by_filesystem.keys():
+                # A container for all the warnings found on the filesystem.
+                warnings = {}
+                snapshots = snapshots_by_filesystem.get(filesystem_name)
+                # See if way to make this work like a plugin instead of having to
+                # import then run. Just run them all like sos. Attribute error is
+                # thrown and silently caught if graphing is disabled because the
+                # require packages are not installed. For now we hardcode
+                # everything.
+                plugins = [GlocksActivity(snapshots, path_to_output_dir),
+                           GSStats(snapshots, path_to_output_dir),
+                           Snapshots(snapshots, path_to_output_dir),
+                           GlocksHighDemoteSeconds(snapshots, path_to_output_dir),
+                           GlocksInSnapshots(snapshots, path_to_output_dir),
+                           Pids(snapshots, path_to_output_dir)]
+                for plugin in plugins:
+                    plugin.analyze()
+                    plugin.write(html_format=True)
+                    if (not cmdline_opts.disable_std_out):
+                        plugin.console()
+                    try:
+                        if (not cmdline_opts.disable_graphs):
+                            plugin.graph(enable_png_format)
+                    except AttributeError:
+                        pass
+                    warnings =  merge_dicts(warnings, plugin.get_warnings())
+                # Process all the warning from all the plugins.
+                warnings_str = ""
+                for wkey in warnings.keys():
+                    # Get the warnings that were found.
+                    warnings_str += "%s\n" %(wkey)
+                    for item in warnings.get(wkey):
+                        warnings_str += "\t%s\n" %(item)
+                if (warnings_str):
+                    path_to_output_file = os.path.join(os.path.join(path_to_output_dir,
+                                                                    filesystem_name),
+                                                       "warnings.txt")
+                    if (not write_to_file(path_to_output_file, warnings_str, append_to_file=False, create_file=True)):
+                        message = "An error occurred writing the file: %s" %(path_to_output_file)
+                        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
 
     except KeyboardInterrupt:
         print ""
