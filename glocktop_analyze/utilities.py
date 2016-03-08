@@ -357,7 +357,7 @@ def write_to_file(path_to_filename, data, append_to_file=True, create_file=False
         if (not pkgutil.find_loader("bs4") == None):
             from bs4 import BeautifulSoup, Tag
             soup = BeautifulSoup(data, 'html.parser')
-            data = soup.prettify()
+            data = soup.prettify(formatter='html')
 
     [parent_dir, filename] = os.path.split(path_to_filename)
     if (mkdirs(parent_dir)):

@@ -36,23 +36,32 @@ class GlocksActivity(Plugin):
 
     def __get_html(self, colorize=False):
         summary = ""
+        start_time = None
+        end_time = None
         for snapshot in self.get_snapshots():
             current_summary = ""
             glocks = snapshot.get_glocks()
+            if (start_time == None):
+                start_time = snapshot.get_date_time()
+            end_time = snapshot.get_date_time()
             for glock in glocks:
                 glock_holders = glock.get_holders()
                 if (len(glock_holders) >= self.__minimum_waiter_count):
                     current_summary += "  %s<BR/>" %(glock)
                     for holder in glock_holders:
-                        current_summary += "%s<BR/>" %(holder)
+                        current_summary += "&nbsp;&nbsp;&nbsp;&nbsp; %s<BR/>" %(holder)
                     if (not glock.get_glock_object() == None):
-                        current_summary += "%s<BR/>" %(glock.get_glock_object())
+                        current_summary += "&nbsp;&nbsp;&nbsp;&nbsp; %s<BR/>" %(glock.get_glock_object())
+                    current_summary += "<BR/>"
                 if (current_summary):
                     current_summary_title = str(snapshot)
                     if (colorize):
                         current_summary_title = "<b>%s</b>" %(str(snapshot))
-                    summary += "%s<BR/>%s<BR/>" %(current_summary_title, current_summary)
-        return summary
+                    summary += "%s<BR/>%s" %(current_summary_title, current_summary)
+        header =  "<center><H3>Glock Activity between"
+        header += "%s and %s </H3></center>" %(start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                                               end_time.strftime("%Y-%m-%d %H:%M:%S"))
+        return header + summary
 
     def console(self):
         summary = self.__get_text(colorize=True)
