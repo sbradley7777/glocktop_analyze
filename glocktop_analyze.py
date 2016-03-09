@@ -118,40 +118,7 @@ def __get_options(version) :
         message = "Failed to find pygal. The python-pygal package needs to be installed."
         logging.getLogger(MAIN_LOGGER_NAME).error(message)
 
-    """
-    cmd_parser.add_option("-m", "--minimum_waiter_count",
-                          action="store",
-                          dest="minimum_waiter_count",
-                          help="the minimum number of waiters for a glock",
-                          type="int",
-                          metavar="<minimum waiter count>",
-                          default=1)
-    cmd_parser.add_option("-S", "--disable_stats",
-                           action="store_true",
-                           dest="disable_stats",
-                           help="do not print stats",
-                           default=False)
-    cmd_parser.add_option("-C", "--disable_call_trace",
-                           action="store_true",
-                           dest="disable_call_trace",
-                           help="do not print call traces for holder/waiters",
-                           default=False)
-    cmd_parser.add_option("-g", "--find_glock",
-                          action="store",
-                          dest="glock_inode",
-                          help="a glock hexadecimal number to search for",
-                          type="string",
-                          metavar="0x<glock number>",
-                          default="")
-    cmd_parser.add_option("-t", "--find_glock_type",
-                          action="store",
-                          dest="glock_type",
-                          help="a glock type to search for (requires glock number (-g))",
-                          type="int",
-                          metavar="<glock type>",
-                          default=None)
-    """
- # Get the options and return the result.
+    # Get the options and return the result.
     (cmdLine_opts, cmdLine_args) = cmd_parser.parse_args()
     return (cmdLine_opts, cmdLine_args)
 
@@ -250,28 +217,6 @@ if __name__ == "__main__":
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).info(message)
             sys.exit(1)
 
-        """
-        if (not cmdline_opts.minimum_waiter_count > 0):
-            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error("The minimum holder count for a glock (-m) must be a positive integer.")
-            sys.exit(1)
-        if (not cmdline_opts.glock_type == None):
-            if (not (0 < cmdline_opts.glock_type < 10)):
-                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error("The glock type (-G) must be an integer between 1 - 9.")
-                sys.exit(1)
-        glock_inode = ""
-        if (cmdline_opts.glock_inode):
-            try:
-                if (cmdline_opts.glock_inode.startswith("0x")):
-                    int("%s" %(cmdline_opts.glock_inode), 16)
-                else:
-                    int("0x%s" %(cmdline_opts.glock_inode), 16)
-            except ValueError:
-                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error("The glock number (-g) must be a hexadecimal number.")
-                sys.exit(1)
-            except TypeError:
-                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error("The glock number (-g) must be a hexadecimal number.")
-                sys.exit(1)
-        """
         # #######################################################################
         # Analyze the files.
         # #######################################################################
