@@ -61,37 +61,39 @@ from glocktop_analyze.plugins.pids import Pids
 VERSION_NUMBER = "0.1-5"
 
 def output_warnings(warnings, disable_std_out=True, html_format=False):
-    if (not disable_std_out):
-        warnings_str = ""
-        for wkey in warnings.keys():
-            warnings_str += "%s\n" %(ColorizeConsoleText.red(wkey))
-            for item in warnings.get(wkey):
-                warnings_str += "\t%s\n" %(item)
-        print ColorizeConsoleText.red("Warnings Found:\n") +  warnings_str
-    wdata = ""
-    path_to_output_file = ""
-    if (not html_format):
-        path_to_output_file = os.path.join(path_to_output_dir, "warnings.txt")
-        for wkey in warnings.keys():
-            wdata += "%s\n" %(wkey)
-            for item in warnings.get(wkey):
-                wdata += "\t%s\n" %(item)
-        wdata = "Warnings Found:\n" +  wdata
-    else:
-        path_to_output_file = os.path.join(path_to_output_dir, "warnings.html")
-        bdata = ""
-        for wkey in warnings.keys():
-            # Get the warnings that were found.
-            bdata += "<b>%s</b><BR/>" %(wkey)
-            for item in warnings.get(wkey):
-                bdata += "&nbsp;&nbsp;&nbsp;%s<BR/>" %(item)
-        if (bdata):
-            title = "<center><h3>Warnings Found on Filesystems</h3></center>"
-            wdata = "%s\n%s\n%s\n<BR/><HR/><BR/>%s" %(generate_header(), title, bdata, generate_footer())
+    if (warnings):
+        if (not disable_std_out):
+            warnings_str = ""
+            for wkey in warnings.keys():
+                warnings_str += "%s\n" %(ColorizeConsoleText.red(wkey))
+                for item in warnings.get(wkey):
+                    warnings_str += "\t%s\n" %(item)
+            print ColorizeConsoleText.red("Warnings Found:\n") +  warnings_str
+        wdata = ""
+        path_to_output_file = ""
+        if (not html_format):
+            path_to_output_file = os.path.join(path_to_output_dir, "warnings.txt")
+            for wkey in warnings.keys():
+                wdata += "%s\n" %(wkey)
+                for item in warnings.get(wkey):
+                    wdata += "\t%s\n" %(item)
+            wdata = "Warnings Found:\n" +  wdata
+        else:
+            path_to_output_file = os.path.join(path_to_output_dir, "warnings.html")
+            bdata = ""
+            for wkey in warnings.keys():
+                # Get the warnings that were found.
+                bdata += "<b>%s</b><BR/>" %(wkey)
+                for item in warnings.get(wkey):
+                    bdata += "&nbsp;&nbsp;&nbsp;%s<BR/>" %(item)
+            if (bdata):
+                title = "<center><h3>Warnings Found on Filesystems</h3></center>"
+                wdata = "%s\n%s\n%s\n<BR/><HR/><BR/>%s" %(generate_header(), title, bdata, generate_footer())
 
-        if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
-            message = "An error occurred writing the file: %s" %(path_to_output_file)
-            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+        if (wdata):
+            if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
+                message = "An error occurred writing the file: %s" %(path_to_output_file)
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
 
 # ##############################################################################
 # Get user selected options

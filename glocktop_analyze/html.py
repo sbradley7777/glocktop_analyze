@@ -31,7 +31,7 @@ def generate_table_header():
     style += "width: 100%;\n"
     #style += "    background-color: #f1f1c1;\n"
     style += "}\n"
-
+    """
     style += "table#t01 tr:nth-child(even) {\n"
     style += "background-color: #eee;\n"
     style += "}\n"
@@ -39,7 +39,7 @@ def generate_table_header():
     style += "table#t01 tr:nth-child(odd) {\n"
     style += "background-color:#fff;\n"
     style += "}\n"
-
+    """
     style += "table#t01 th{\n"
     style += "background-color: black;\n"
     style += "color: white;\n"
@@ -66,11 +66,21 @@ def generate_table(table, header, title="", description="", caption=""):
         for item in header:
             htable += "<th>%s</th>" %(item)
         htable += "</tr>\n"
+    index = 1
+    # Alternate the colors of table row background unless the first value is
+    # just a "-". If first is "-" then it is assume it is carry over from
+    # previous row.
     for row in table:
-        htable += "<tr>"
+        if (index % 2 == 0):
+            htable += "<tr>"
+        else:
+            htable += "<tr bgcolor=\"#eee\">"
         for item in row:
             htable += "<td>%s</td>" %(item)
         htable += "</tr>\n"
+        if (len(row) > 0):
+            if (not row[0].strip() == "-"):
+                index += 1
     htable +=  "</table><BR/><HR/>\n"
     return htable
 
