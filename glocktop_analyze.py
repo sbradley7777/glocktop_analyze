@@ -45,6 +45,7 @@ from glocktop_analyze.glock import Glock, GlockHolder, GlockObject
 from glocktop_analyze.glocks_stats import GlocksStats, GlockStat
 from glocktop_analyze.parsers.snapshot import parse_snapshot, process_snapshot
 
+from glocktop_analyze.html import generate_header, generate_footer
 
 from glocktop_analyze.plugins.glocks_activity import GlocksActivity
 from glocktop_analyze.plugins.glocks_stats import GSStats
@@ -58,6 +59,39 @@ from glocktop_analyze.plugins.pids import Pids
 # Global vars:
 # #####################################################################
 VERSION_NUMBER = "0.1-5"
+
+def output_warnings(warnings, disable_std_out=True, html_format=False):
+    if (not disable_std_out):
+        warnings_str = ""
+        for wkey in warnings.keys():
+            warnings_str += "%s\n" %(ColorizeConsoleText.red(wkey))
+            for item in warnings.get(wkey):
+                warnings_str += "\t%s\n" %(item)
+        print ColorizeConsoleText.red("Warnings Found:\n") +  warnings_str
+    wdata = ""
+    path_to_output_file = ""
+    if (not html_format):
+        path_to_output_file = os.path.join(path_to_output_dir, "warnings.txt")
+        for wkey in warnings.keys():
+            wdata += "%s\n" %(wkey)
+            for item in warnings.get(wkey):
+                wdata += "\t%s\n" %(item)
+        wdata = "Warnings Found:\n" +  wdata
+    else:
+        path_to_output_file = os.path.join(path_to_output_dir, "warnings.html")
+        bdata = ""
+        for wkey in warnings.keys():
+            # Get the warnings that were found.
+            bdata += "<b>%s</b><BR/>" %(wkey)
+            for item in warnings.get(wkey):
+                bdata += "&nbsp;&nbsp;&nbsp;%s<BR/>" %(item)
+        if (bdata):
+            title = "<center><h3>Warnings Found on Filesystems</h3></center>"
+            wdata = "%s\n%s\n%s\n<BR/><HR/><BR/>%s" %(generate_header(), title, bdata, generate_footer())
+
+        if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
+            message = "An error occurred writing the file: %s" %(path_to_output_file)
+            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
 
 # ##############################################################################
 # Get user selected options
@@ -268,8 +302,8 @@ if __name__ == "__main__":
             # Analyze, print, write, and graph stats
             # #######################################################################
             # svg does better charts than png
-            enable_png_format=False
-
+            enable_png_format = False
+            enable_html_format = True
             # A function to merge dictionaries.
             def merge_dicts(dict_org, dict_to_merge):
                 if (not dict_to_merge):
@@ -284,16 +318,11 @@ if __name__ == "__main__":
                             value_org.append(value)
                 return dict_org
 
+            # A container for all the warnings found on the filesystem.
+            warnings = {}
             # Loop over all the filesystems and plugins.
             for filesystem_name in snapshots_by_filesystem.keys():
-                # A container for all the warnings found on the filesystem.
-                warnings = {}
                 snapshots = snapshots_by_filesystem.get(filesystem_name)
-                # See if way to make this work like a plugin instead of having to
-                # import then run. Just run them all like sos. Attribute error is
-                # thrown and silently caught if graphing is disabled because the
-                # require packages are not installed. For now we hardcode
-                # everything.
                 plugins = [GlocksActivity(snapshots, path_to_output_dir),
                            GSStats(snapshots, path_to_output_dir),
                            Snapshots(snapshots, path_to_output_dir),
@@ -302,7 +331,7 @@ if __name__ == "__main__":
                            Pids(snapshots, path_to_output_dir)]
                 for plugin in plugins:
                     plugin.analyze()
-                    plugin.write(html_format=True)
+                    plugin.write(html_format=enable_html_format)
                     if (not cmdline_opts.disable_std_out):
                         plugin.console()
                     try:
@@ -311,21 +340,7 @@ if __name__ == "__main__":
                     except AttributeError:
                         pass
                     warnings =  merge_dicts(warnings, plugin.get_warnings())
-                # Process all the warning from all the plugins.
-                warnings_str = ""
-                for wkey in warnings.keys():
-                    # Get the warnings that were found.
-                    warnings_str += "%s\n" %(wkey)
-                    for item in warnings.get(wkey):
-                        warnings_str += "\t%s\n" %(item)
-                if (warnings_str):
-                    path_to_output_file = os.path.join(os.path.join(path_to_output_dir,
-                                                                    filesystem_name),
-                                                       "warnings.txt")
-                    if (not write_to_file(path_to_output_file, warnings_str, append_to_file=False, create_file=True)):
-                        message = "An error occurred writing the file: %s" %(path_to_output_file)
-                        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
-
+            output_warnings(warnings, disable_std_out=cmdline_opts.disable_std_out, html_format=True)
     except KeyboardInterrupt:
         print ""
         message =  "This script will exit since control-c was executed by end user."
