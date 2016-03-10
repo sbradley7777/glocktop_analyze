@@ -13,9 +13,11 @@ from glocktop_analyze.html import generate_footer
 class Pids(Plugin):
     def __init__(self, snapshots, path_to_output_dir):
         Plugin.__init__(self, snapshots, "Pids Stats", path_to_output_dir)
-
         self.__pids_in_snapshots = []
         self.__pids_using_multiple_glocks = []
+
+        self.__mininum_snapshot_count = 2
+        self.__mininum_glocks_count = 2
 
     def __encode(self, pid, command):
         # Not sure what guranteees no duplicates, that command will not be empty
@@ -49,14 +51,14 @@ class Pids(Plugin):
         for i in range(0, len(ordered_dict)):
             items = ordered_dict.items()[i]
             (pid, command) = self.__decode(items[0])
-            if (items[1] > 1):
+            if (items[1] >= self.__mininum_snapshot_count):
                 self.__pids_in_snapshots.append([self.get_filesystem_name(), pid, command, items[1]])
 
         ordered_dict = OrderedDict(sorted(pids_to_glocks.items(), key=lambda t: len(t[1]), reverse=True))
         for i in range(0, len(ordered_dict)):
             items = ordered_dict.items()[i]
             (pid, command) = self.__decode(items[0])
-            if (len(items[1]) > 1):
+            if (len(items[1].split()) >= self.__mininum_glocks_count):
                 # Change to string instead of list for value. do like glocks_high_demote_seconds.
                 self.__pids_using_multiple_glocks.append([self.get_filesystem_name(), pid, command, len(items[1].split()), items[1]])
 

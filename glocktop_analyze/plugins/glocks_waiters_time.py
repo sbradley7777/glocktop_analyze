@@ -15,6 +15,9 @@ class GlocksWaitersTime(Plugin):
         Plugin.__init__(self, snapshots, "Glocks Holder and Waiters Count over Time", path_to_output_dir)
         self.__glocks_holder_waiters_by_date = {}
 
+        self.__minimum_holder_waiter_count = 3
+        self.__maximum_glocks_to_graph = 10
+
     def __encode(self, glock_type, glock_inode):
         return "%s/%s" %(glock_type, glock_inode)
 
@@ -88,16 +91,15 @@ class GlocksWaitersTime(Plugin):
             hw_count = 0
             for gtuple in glocks_holder_waiters_by_date.get(hashkey):
                 hw_count += gtuple[1]
-            if (hw_count > 1):
+            if (hw_count > self.__minimum_holder_waiter_count):
                 glocks_holder_waiters_counter[hashkey] = hw_count
 
         # Only graph the glocks with highest holder+waiter count over all the
         # snapshots.
-        max_glocks_to_graph = 10
         glocks_highest_count = {}
         index = 1
         for t in reversed(OrderedDict(sorted(glocks_holder_waiters_counter.items(), key=lambda t: t[1]))):
-            if (index > max_glocks_to_graph):
+            if (index > self.__maximum_glocks_to_graph):
                 try:
                     del glocks_holder_waiters_counter[t]
                 except KeyError:

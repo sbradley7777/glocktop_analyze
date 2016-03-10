@@ -17,6 +17,7 @@ class GlocksInSnapshots(Plugin):
     def __init__(self, snapshots, path_to_output_dir):
         Plugin.__init__(self, snapshots, "Glocks in Snapshots", path_to_output_dir)
         self.__table = []
+
         self.__minimum_count = 3
 
     def __encode(self, glock_type, glock_inode):

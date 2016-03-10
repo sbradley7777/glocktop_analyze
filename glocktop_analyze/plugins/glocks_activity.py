@@ -11,8 +11,9 @@ from glocktop_analyze.html import generate_header, generate_footer
 class GlocksActivity(Plugin):
     def __init__(self, snapshots, path_to_output_dir):
         Plugin.__init__(self, snapshots, "Glocks Activity", path_to_output_dir)
-        self.__minimum_waiter_count = 2
         self.__glock_dump = []
+
+        self.__minimum_waiter_count = 2
 
     def __get_text(self, colorize=False):
         summary = ""
