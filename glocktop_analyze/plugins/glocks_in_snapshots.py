@@ -14,11 +14,13 @@ from glocktop_analyze.html import generate_table_header, generate_table
 from glocktop_analyze.html import generate_footer
 
 class GlocksInSnapshots(Plugin):
-    def __init__(self, snapshots, path_to_output_dir):
+    def __init__(self, snapshots, path_to_output_dir, options={}):
         Plugin.__init__(self, snapshots, "Glocks in Snapshots", path_to_output_dir)
         self.__table = []
 
-        self.__minimum_count = 3
+        self.__minimum_glocks_in_snapshots = 2
+        if (options.has_key("mininum_glocks_in_snapshots")):
+            self.__minimum_glocks_in_snapshots = options.get("mininum_glocks_in_snapshots")
 
     def __encode(self, glock_type, glock_inode):
         return "%s/%s" %(glock_type, glock_inode)
@@ -37,7 +39,7 @@ class GlocksInSnapshots(Plugin):
                 glocks_in_snapshots[hashkey] += 1
         self.__table = []
         for pair in sorted(glocks_in_snapshots.items(), key=itemgetter(1), reverse=True):
-            if (pair[1] >= self.__minimum_count):
+            if (pair[1] >= self.__minimum_glocks_in_snapshots):
                 self.__table.append([self.get_filesystem_name(), pair[0], pair[1]])
 
     def console(self):

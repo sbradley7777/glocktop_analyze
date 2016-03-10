@@ -325,6 +325,9 @@ if __name__ == "__main__":
             # Loop over all the filesystems and plugins.
             for filesystem_name in snapshots_by_filesystem.keys():
                 snapshots = snapshots_by_filesystem.get(filesystem_name)
+                # create classes list
+                # for each class do; create instance
+                # Pass any commandline options to the instance creation.
                 plugins = [GlocksActivity(snapshots, path_to_output_dir),
                            GSStats(snapshots, path_to_output_dir),
                            Snapshots(snapshots, path_to_output_dir),

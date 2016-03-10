@@ -11,13 +11,17 @@ from glocktop_analyze.html import generate_table_header, generate_table
 from glocktop_analyze.html import generate_footer
 
 class Pids(Plugin):
-    def __init__(self, snapshots, path_to_output_dir):
+    def __init__(self, snapshots, path_to_output_dir, options={}):
         Plugin.__init__(self, snapshots, "Pids Stats", path_to_output_dir)
         self.__pids_in_snapshots = []
         self.__pids_using_multiple_glocks = []
 
         self.__mininum_snapshot_count = 2
+        if (options.has_key("mininum_snapshot_count")):
+            self.__mininum_snapshot_count = options.get("mininum_snapshot_count")
         self.__mininum_glocks_count = 2
+        if (options.has_key("mininum_glocks_count")):
+            self.__mininum_glocks_count = options.get("mininum_glocks_count")
 
     def __encode(self, pid, command):
         # Not sure what guranteees no duplicates, that command will not be empty

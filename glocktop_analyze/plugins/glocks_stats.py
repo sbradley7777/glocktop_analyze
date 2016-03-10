@@ -13,7 +13,7 @@ from glocktop_analyze.html import generate_table_header, generate_table
 from glocktop_analyze.html import generate_footer
 
 class GSStats(Plugin):
-    def __init__(self, snapshots, path_to_output_dir):
+    def __init__(self, snapshots, path_to_output_dir, options={}):
         snapshots_with_stats = []
         for snapshot in snapshots:
             if (not snapshot.get_glocks_stats() == None):

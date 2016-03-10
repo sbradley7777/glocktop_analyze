@@ -9,11 +9,12 @@ from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file
 from glocktop_analyze.html import generate_header, generate_footer
 
 class GlocksActivity(Plugin):
-    def __init__(self, snapshots, path_to_output_dir):
+    def __init__(self, snapshots, path_to_output_dir, options={}):
         Plugin.__init__(self, snapshots, "Glocks Activity", path_to_output_dir)
         self.__glock_dump = []
-
         self.__minimum_waiter_count = 2
+        if (options.has_key("mininum_waiter_count")):
+            self.__minimum_waiter_count = options.get("mininum_waiter_count")
 
     def __get_text(self, colorize=False):
         summary = ""
