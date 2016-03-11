@@ -323,17 +323,22 @@ if __name__ == "__main__":
             # A container for all the warnings found on the filesystem.
             warnings = {}
             # Loop over all the filesystems and plugins.
+            options = {}
             for filesystem_name in snapshots_by_filesystem.keys():
                 snapshots = snapshots_by_filesystem.get(filesystem_name)
                 # create classes list
                 # for each class do; create instance
                 # Pass any commandline options to the instance creation.
-                plugins = [GlocksActivity(snapshots, path_to_output_dir),
-                           GSStats(snapshots, path_to_output_dir),
-                           Snapshots(snapshots, path_to_output_dir),
-                           GlocksHighDemoteSeconds(snapshots, path_to_output_dir),
-                           GlocksInSnapshots(snapshots, path_to_output_dir),
-                           Pids(snapshots, path_to_output_dir)]
+                # For example: dispatch_dict = {"Foo": Foo, "Bar": Bar}
+                # if class_name == Foo
+                #    options = {"option_name": option value}
+                # foo = dispatch_dict["Foo"](snapshots, path_to_output_dir, options)
+                plugins = [GlocksActivity(snapshots, path_to_output_dir, options),
+                           GSStats(snapshots, path_to_output_dir, options),
+                           Snapshots(snapshots, path_to_output_dir, options),
+                           GlocksHighDemoteSeconds(snapshots, path_to_output_dir, options),
+                           GlocksInSnapshots(snapshots, path_to_output_dir, options),
+                           Pids(snapshots, path_to_output_dir, options)]
                 for plugin in plugins:
                     plugin.analyze()
                     plugin.write(html_format=enable_html_format)

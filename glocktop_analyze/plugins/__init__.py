@@ -11,9 +11,6 @@ from glocktop_analyze.snapshot import Snapshot
 from glocktop_analyze.glocks_stats import GlocksStats, GlockStat
 from glocktop_analyze.utilities import LogWriter, mkdirs, write_to_file
 
-MAXIMUM_X_POINTS = 200
-MAXIMUM_Y_POINTS = 200
-
 try:
     import pygal
     from pygal.style import Style
@@ -25,12 +22,20 @@ except (ImportError, NameError):
 # Classes
 # #######################################################################
 class Plugin(object):
-    def __init__(self, snapshots, title, path_to_output_dir):
+    def __init__(self, name, description, snapshots, title, path_to_output_dir):
         # A list of snapshots of a particular filesystem.
+        self.__name = name
+        self.__description = description
         self.__snapshots = snapshots
         self.__title = title
         self.__path_to_output_dir = path_to_output_dir
         self.__warnings = {}
+
+    def get_name(self):
+        return self.__name
+
+    def get_description(self):
+        return self.__description
 
     def get_snapshots(self):
         return self.__snapshots
@@ -70,7 +75,6 @@ class Plugin(object):
 
     def graph(self, png_format=False):
         pass
-
 
 # #######################################################################
 # Functions

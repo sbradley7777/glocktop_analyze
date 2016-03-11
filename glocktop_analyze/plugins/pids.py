@@ -12,7 +12,8 @@ from glocktop_analyze.html import generate_footer
 
 class Pids(Plugin):
     def __init__(self, snapshots, path_to_output_dir, options={}):
-        Plugin.__init__(self, snapshots, "Pids Stats", path_to_output_dir)
+        Plugin.__init__(self, "pids", "The pids information relating to glocks.",
+                        snapshots, "Pids Stats", path_to_output_dir)
         self.__pids_in_snapshots = []
         self.__pids_using_multiple_glocks = []
 

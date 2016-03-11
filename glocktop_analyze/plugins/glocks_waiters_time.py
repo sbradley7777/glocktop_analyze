@@ -11,8 +11,9 @@ from glocktop_analyze.plugins import generate_date_graphs
 from glocktop_analyze.html import generate_graph_index_page
 
 class GlocksWaitersTime(Plugin):
-    def __init__(self, snapshots, path_to_output_dir, options={}):
+    def __init__(self, snapshots, path_to_output_dir, options):
         Plugin.__init__(self, snapshots,
+                        "glocks_waiters_time", "The holder + waiters of a glock over time.",
                         "Glocks Holder and Waiters Count over Time",
                         path_to_output_dir)
         self.__glocks_holder_waiters_by_date = {}

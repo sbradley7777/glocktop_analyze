@@ -10,8 +10,10 @@ from glocktop_analyze.html import generate_table_header, generate_table
 from glocktop_analyze.html import generate_footer
 
 class GlocksHighDemoteSeconds(Plugin):
-    def __init__(self, snapshots, path_to_output_dir, options={}):
-        Plugin.__init__(self, snapshots, "Glocks with High Demote Seconds", path_to_output_dir)
+    def __init__(self, snapshots, path_to_output_dir, options):
+        Plugin.__init__(self, "glocks_high_demote_seconds",
+                        "The glocks with demote seconds higher than zero.",
+                        snapshots, "Glocks with High Demote Seconds", path_to_output_dir)
         self.__table = []
 
 

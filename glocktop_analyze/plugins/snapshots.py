@@ -10,8 +10,9 @@ from glocktop_analyze.html import generate_table_header, generate_table
 from glocktop_analyze.html import generate_footer
 
 class Snapshots(Plugin):
-    def __init__(self, snapshots, path_to_output_dir, options={}):
-        Plugin.__init__(self, snapshots, "Snapshot Stats", path_to_output_dir)
+    def __init__(self, snapshots, path_to_output_dir, options):
+        Plugin.__init__(self, "snapshots", "The stats for the snapshots and dlm activity.",
+                        snapshots, "Snapshot Stats", path_to_output_dir)
         self.__count = 0
         self.__start_time = None
         self.__stop_time = None
