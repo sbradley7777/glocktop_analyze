@@ -9,10 +9,10 @@ from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file
 from glocktop_analyze.html import generate_header, generate_footer
 
 class GlocksActivity(Plugin):
+    OPTIONS = [("mininum_waiter_count",
+                "The mininum number of holder and waiters that are required on a glock.",
+                2)]
     def __init__(self, snapshots, path_to_output_dir, options):
-        self.options = [("mininum_waiter_count",
-                         "The mininum number of holder and waiters that are required on a glock.",
-                         2)]
         Plugin.__init__(self, "glocks_activity",
                         "The glock's lockdump analyzed for multiple holder and waiters.",
                         snapshots, "Glocks Activity", path_to_output_dir,

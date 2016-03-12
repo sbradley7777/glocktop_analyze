@@ -11,14 +11,14 @@ from glocktop_analyze.plugins import generate_date_graphs
 from glocktop_analyze.html import generate_graph_index_page
 
 class GlocksWaitersTime(Plugin):
-    def __init__(self, snapshots, path_to_output_dir, options):
-        self.options = [("mininum_waiter_count",
-                         "The mininum number of holder + waiters that are required on a glock",
-                         2),
-                        ("maximum_glocks_to_graph",
-                         "The maximum number of different glocks that will be graph.",
-                         10)]
+    OPTIONS = [("mininum_waiter_count",
+                "The mininum number of holder + waiters that are required on a glock",
+                2),
+               ("maximum_glocks_to_graph",
+                "The maximum number of different glocks that will be graph.",
+                10)]
 
+    def __init__(self, snapshots, path_to_output_dir, options):
         Plugin.__init__(self, "glocks_waiters_time",
                         "The holder + waiters of a glock over time.",
                         snapshots,

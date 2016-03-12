@@ -110,8 +110,8 @@ def get_options(user_options):
                     if (found_plugin_option):
                         break
                     elif (plugin_name == plugin.get_name()):
-                        if (hasattr(plugin, "options")):
-                            for plugin_option in plugin.options:
+                        if (hasattr(plugin, "OPTIONS")):
+                            for plugin_option in plugin.OPTIONS:
                                 if (plugin_option_name == plugin_option[0]):
                                     found_plugin_option = True
                                     options[option_split[0]] = option_split[1]
@@ -278,8 +278,8 @@ if __name__ == "__main__":
                 sys.exit()
             options_str = ""
             for plugin in plugins:
-                if (hasattr(plugin, "options")):
-                    for option in plugin.options:
+                if (hasattr(plugin, "OPTIONS")):
+                    for option in plugin.OPTIONS:
                         option_name = "  %s.%s" %(plugin.get_name(), option[0])
                         options_str += "%s: %s (Default=%d)\n" %(ColorizeConsoleText.red(option_name), option[1], option[2])
             if (options_str):

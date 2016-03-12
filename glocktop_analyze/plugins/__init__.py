@@ -32,29 +32,28 @@ class Plugin(object):
         self.__warnings = {}
 
         self.__options = {}
-        if hasattr(self, "options"):
+        if hasattr(self, "OPTIONS"):
             # Populate the options with default value.
-            for plugin_option in self.options:
+            for plugin_option in self.OPTIONS:
                 self.__options[plugin_option[0]] = plugin_option[2]
             for option_name in options.keys():
                 try:
                     option_name_split = option_name.rsplit(".", 1)
                     plugin_name = option_name_split[0]
                     plugin_option_name = option_name_split[1]
-                    if hasattr(self, "options"):
-                        for plugin_option in self.options:
-                            if (plugin_name == self.get_name()):
-                                if (plugin_option_name == plugin_option[0]):
-                                    default_option_value = self.__options[plugin_option_name]
-                                    if (isinstance(default_option_value, int) and
-                                        options.get(option_name).isdigit()):
-                                        self.__options[plugin_option_name] = int(options.get(option_name))
-                                    elif (isinstance(default_option_value, str)):
-                                        self.__options[plugin_option_name] = options.get(option_name)
-                                    else:
-                                        message = "Invalid value for option \"%s\" for plugin: %s." %(option_name,
-                                                                                                      self.get_name())
-                                        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+                    for plugin_option in self.OPTIONS:
+                        if (plugin_name == self.get_name()):
+                            if (plugin_option_name == plugin_option[0]):
+                                default_option_value = self.__options[plugin_option_name]
+                                if (isinstance(default_option_value, int) and
+                                    options.get(option_name).isdigit()):
+                                    self.__options[plugin_option_name] = int(options.get(option_name))
+                                elif (isinstance(default_option_value, str)):
+                                    self.__options[plugin_option_name] = options.get(option_name)
+                                else:
+                                    message = "Invalid value for option \"%s\" for plugin: %s." %(option_name,
+                                                                                                  self.get_name())
+                                    logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
                 except IndexError:
                     pass
 

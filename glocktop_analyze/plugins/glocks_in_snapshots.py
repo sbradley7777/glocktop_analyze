@@ -14,11 +14,11 @@ from glocktop_analyze.html import generate_table_header, generate_table
 from glocktop_analyze.html import generate_footer
 
 class GlocksInSnapshots(Plugin):
-    def __init__(self, snapshots, path_to_output_dir, options):
-        self.options = [("mininum_glocks_in_snapshots",
-                         "The mininum number of times a glock is found in all the snapshots.",
-                         2)]
+    OPTIONS = [("mininum_glocks_in_snapshots",
+                "The mininum number of times a glock is found in all the snapshots.",
+                2)]
 
+    def __init__(self, snapshots, path_to_output_dir, options):
         Plugin.__init__(self, "glocks_in_snapshots",
                         "The glocks that appear in multiple snapshots.",
                         snapshots, "Glocks in Snapshots", path_to_output_dir,
