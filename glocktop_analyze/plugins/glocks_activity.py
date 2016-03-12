@@ -11,16 +11,14 @@ from glocktop_analyze.html import generate_header, generate_footer
 class GlocksActivity(Plugin):
     def __init__(self, snapshots, path_to_output_dir, options):
         self.options = [("mininum_waiter_count",
-                         "The minimum number of holder + waiters that are required on a glock",
-                           2, True)]
+                         "The mininum number of holder and waiters that are required on a glock.",
+                         2)]
         Plugin.__init__(self, "glocks_activity",
-                        "The glock's lockdump analyzed for multiple holder+waiters.",
-                        snapshots, "Glocks Activity", path_to_output_dir)
+                        "The glock's lockdump analyzed for multiple holder and waiters.",
+                        snapshots, "Glocks Activity", path_to_output_dir,
+                        options)
         self.__glock_dump = []
-
-        self.__minimum_waiter_count = 2
-        if (options.has_key("mininum_waiter_count")):
-            self.__minimum_waiter_count = options.get("mininum_waiter_count")
+        self.__mininum_waiter_count = int(self.get_option("mininum_waiter_count"))
 
     def __get_text(self, colorize=False):
         summary = ""
@@ -29,7 +27,7 @@ class GlocksActivity(Plugin):
             glocks = snapshot.get_glocks()
             for glock in glocks:
                 glock_holders = glock.get_holders()
-                if (len(glock_holders) >= self.__minimum_waiter_count):
+                if (len(glock_holders) >= self.__mininum_waiter_count):
                     current_summary += "  %s\n" %(glock)
                     for holder in glock_holders:
                         current_summary += "     %s\n" %(holder)
@@ -54,7 +52,7 @@ class GlocksActivity(Plugin):
             end_time = snapshot.get_date_time()
             for glock in glocks:
                 glock_holders = glock.get_holders()
-                if (len(glock_holders) >= self.__minimum_waiter_count):
+                if (len(glock_holders) >= self.__mininum_waiter_count):
                     current_summary += "  %s<BR/>" %(glock)
                     for holder in glock_holders:
                         current_summary += "&nbsp;&nbsp;&nbsp;&nbsp; %s<BR/>" %(holder)

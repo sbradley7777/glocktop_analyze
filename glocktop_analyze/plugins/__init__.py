@@ -22,7 +22,7 @@ except (ImportError, NameError):
 # Classes
 # #######################################################################
 class Plugin(object):
-    def __init__(self, name, description, snapshots, title, path_to_output_dir):
+    def __init__(self, name, description, snapshots, title, path_to_output_dir, options):
         # A list of snapshots of a particular filesystem.
         self.__name = name
         self.__description = description
@@ -30,6 +30,33 @@ class Plugin(object):
         self.__title = title
         self.__path_to_output_dir = path_to_output_dir
         self.__warnings = {}
+
+        self.__options = {}
+        if hasattr(self, "options"):
+            # Populate the options with default value.
+            for plugin_option in self.options:
+                self.__options[plugin_option[0]] = plugin_option[2]
+            for option_name in options.keys():
+                try:
+                    option_name_split = option_name.rsplit(".", 1)
+                    plugin_name = option_name_split[0]
+                    plugin_option_name = option_name_split[1]
+                    if hasattr(self, "options"):
+                        for plugin_option in self.options:
+                            if (plugin_name == self.get_name()):
+                                if (plugin_option_name == plugin_option[0]):
+                                    default_option_value = self.__options[plugin_option_name]
+                                    if (isinstance(default_option_value, int) and
+                                        options.get(option_name).isdigit()):
+                                        self.__options[plugin_option_name] = int(options.get(option_name))
+                                    elif (isinstance(default_option_value, str)):
+                                        self.__options[plugin_option_name] = options.get(option_name)
+                                    else:
+                                        message = "Invalid value for option \"%s\" for plugin: %s." %(option_name,
+                                                                                                      self.get_name())
+                                        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+                except IndexError:
+                    pass
 
     def get_name(self):
         return self.__name
@@ -45,6 +72,11 @@ class Plugin(object):
 
     def get_path_to_output_dir(self):
         return self.__path_to_output_dir
+
+    def get_option(self, option_name):
+        if (self.__options.has_key(option_name)):
+            return self.__options.get(option_name)
+        return ""
 
     def get_hostname(self):
         if (self.__snapshots):
@@ -174,4 +206,3 @@ def generate_bar_graphs(path_to_output_dir, x_axis, y_axis, title, x_axis_title,
         if (os.path.exists(path_to_image_file)):
             path_to_image_files.append(path_to_image_file)
     return path_to_image_files
-

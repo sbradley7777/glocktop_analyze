@@ -95,11 +95,45 @@ def output_warnings(warnings, disable_std_out=True, html_format=False):
                 message = "An error occurred writing the file: %s" %(path_to_output_file)
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
 
+def get_options(user_options):
+    plugins = get_plugins([], "", {})
+    options = {}
+    for option in user_options:
+        option_split = option.rsplit("=", 1)
+        found_plugin_option = False
+        if (len(option_split) == 2):
+            full_option_name = option_split[0].rsplit(".", 1)
+            if (len(full_option_name) == 2):
+                plugin_name = full_option_name[0]
+                plugin_option_name = full_option_name[1]
+                for plugin in plugins:
+                    if (found_plugin_option):
+                        break
+                    elif (plugin_name == plugin.get_name()):
+                        if (hasattr(plugin, "options")):
+                            for plugin_option in plugin.options:
+                                if (plugin_option_name == plugin_option[0]):
+                                    found_plugin_option = True
+                                    options[option_split[0]] = option_split[1]
+                                    break
+        if (not found_plugin_option):
+            message = "The option \"%s\" is not a valid option." %(option)
+            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
+    return options
+
+def get_plugins(snapshots, path_to_output_dir, options):
+    return [GlocksActivity(snapshots, path_to_output_dir, options),
+            GSStats(snapshots, path_to_output_dir, options),
+            Snapshots(snapshots, path_to_output_dir, options),
+            GlocksHighDemoteSeconds(snapshots, path_to_output_dir, options),
+            GlocksInSnapshots(snapshots, path_to_output_dir, options),
+            GlocksWaitersTime(snapshots, path_to_output_dir, options),
+            Pids(snapshots, path_to_output_dir, options)]
+
 # ##############################################################################
 # Get user selected options
 # ##############################################################################
-def __get_options(version) :
-    cmd_parser = OptionParserExtended(version)
+def __get_options(cmd_parser) :
     cmd_parser.add_option("-d", "--debug",
                           action="store_true",
                           dest="enableDebugLogging",
@@ -141,6 +175,18 @@ def __get_options(version) :
                           dest="show_ended_process_and_tlocks",
                           help="show all glocks for ended process and transaction locks",
                           default=False)
+    cmd_parser.add_option("-l", "--show_plugins_list",
+                          action="store_true",
+                          dest="show_plugins_list",
+                          help="show all available plugins and plugin options",
+                          default=False)
+    cmd_parser.add_option("-k", "--plugins_option",
+                          action="extend",
+                          dest="plugins_options",
+                          help="a plugins option and value.",
+                          type="string",
+                          metavar="<option_name=value>",
+                          default=[])
     try:
         import pkgutil
         if (not pkgutil.find_loader("pygal") == None):
@@ -152,9 +198,8 @@ def __get_options(version) :
                                   default=False)
     except (ImportError, NameError):
         message = "Failed to find pygal. The python-pygal package needs to be installed."
-        logging.getLogger(MAIN_LOGGER_NAME).error(message)
+        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
 
-    # Get the options and return the result.
     (cmdLine_opts, cmdLine_args) = cmd_parser.parse_args()
     return (cmdLine_opts, cmdLine_args)
 
@@ -170,6 +215,7 @@ class OptionParserExtended(OptionParser):
 
     def get_command_name(self):
         return self.__command_name
+
     def print_help(self):
         self.print_version()
         examples_message = "\n"
@@ -205,7 +251,8 @@ if __name__ == "__main__":
         # #######################################################################
         # Get the options from the commandline.
         # #######################################################################
-        (cmdline_opts, cmdline_args) = __get_options(VERSION_NUMBER)
+        cmd_parser = OptionParserExtended(VERSION_NUMBER)
+        (cmdline_opts, cmdline_args) = __get_options(cmd_parser)
 
         # #######################################################################
         # Set the logging levels.
@@ -214,9 +261,31 @@ if __name__ == "__main__":
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).setLevel(logging.DEBUG)
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug("Debugging has been enabled.")
 
-        # Find all the valid glocktop files that were specified.
-        message ="The file will be analyzed: %s" %(cmdline_opts.path_to_src_file)
-        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+        # List all the plugins found and their corresponding options.
+        if (cmdline_opts.show_plugins_list):
+            cmd_parser.print_version()
+            plugins = get_plugins([], "", {})
+
+            plugins_str = ""
+            for plugin in plugins:
+                plugins_str += "  %s: %s\n" %(ColorizeConsoleText.red(plugin.get_name()), plugin.get_description())
+            if (plugins_str):
+                print "\nThe plugins installed are:"
+                print plugins_str.rstrip()
+            else:
+                message = "There was no plugins found."
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
+                sys.exit()
+            options_str = ""
+            for plugin in plugins:
+                if (hasattr(plugin, "options")):
+                    for option in plugin.options:
+                        option_name = "  %s.%s" %(plugin.get_name(), option[0])
+                        options_str += "%s: %s (Default=%d)\n" %(ColorizeConsoleText.red(option_name), option[1], option[2])
+            if (options_str):
+                print "\nThe plugin options that can be configured are:"
+                print options_str.rstrip()
+            sys.exit()
 
         # #######################################################################
         # Get the listing of all the files that will be processed.
@@ -256,7 +325,10 @@ if __name__ == "__main__":
         # #######################################################################
         # Analyze the files.
         # #######################################################################
+        options = get_options(cmdline_opts.plugins_options)
         for path_to_filename in path_to_filenames:
+            message ="The file will be analyzed: %s" %(path_to_filename)
+            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
             lines = get_data_from_file(path_to_filename)
             #All the snapshots for all the filesystems.
             snapshots_by_filesystem = {}
@@ -323,7 +395,6 @@ if __name__ == "__main__":
             # A container for all the warnings found on the filesystem.
             warnings = {}
             # Loop over all the filesystems and plugins.
-            options = {}
             for filesystem_name in snapshots_by_filesystem.keys():
                 snapshots = snapshots_by_filesystem.get(filesystem_name)
                 # create classes list
@@ -333,12 +404,7 @@ if __name__ == "__main__":
                 # if class_name == Foo
                 #    options = {"option_name": option value}
                 # foo = dispatch_dict["Foo"](snapshots, path_to_output_dir, options)
-                plugins = [GlocksActivity(snapshots, path_to_output_dir, options),
-                           GSStats(snapshots, path_to_output_dir, options),
-                           Snapshots(snapshots, path_to_output_dir, options),
-                           GlocksHighDemoteSeconds(snapshots, path_to_output_dir, options),
-                           GlocksInSnapshots(snapshots, path_to_output_dir, options),
-                           Pids(snapshots, path_to_output_dir, options)]
+                plugins = get_plugins(snapshots, path_to_output_dir, options)
                 for plugin in plugins:
                     plugin.analyze()
                     plugin.write(html_format=enable_html_format)

@@ -13,7 +13,8 @@ class GlocksHighDemoteSeconds(Plugin):
     def __init__(self, snapshots, path_to_output_dir, options):
         Plugin.__init__(self, "glocks_high_demote_seconds",
                         "The glocks with demote seconds higher than zero.",
-                        snapshots, "Glocks with High Demote Seconds", path_to_output_dir)
+                        snapshots, "Glocks with High Demote Seconds",
+                        path_to_output_dir, options)
         self.__table = []
 
 

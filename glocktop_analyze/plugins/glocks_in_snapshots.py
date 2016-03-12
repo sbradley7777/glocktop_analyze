@@ -15,14 +15,17 @@ from glocktop_analyze.html import generate_footer
 
 class GlocksInSnapshots(Plugin):
     def __init__(self, snapshots, path_to_output_dir, options):
+        self.options = [("mininum_glocks_in_snapshots",
+                         "The mininum number of times a glock is found in all the snapshots.",
+                         2)]
+
         Plugin.__init__(self, "glocks_in_snapshots",
                         "The glocks that appear in multiple snapshots.",
-                        snapshots, "Glocks in Snapshots", path_to_output_dir)
+                        snapshots, "Glocks in Snapshots", path_to_output_dir,
+                        options)
         self.__table = []
 
-        self.__minimum_glocks_in_snapshots = 2
-        if (options.has_key("mininum_glocks_in_snapshots")):
-            self.__minimum_glocks_in_snapshots = options.get("mininum_glocks_in_snapshots")
+        self.__minimum_glocks_in_snapshots = self.get_option("mininum_glocks_in_snapshots")
 
     def __encode(self, glock_type, glock_inode):
         return "%s/%s" %(glock_type, glock_inode)
