@@ -395,7 +395,14 @@ if __name__ == "__main__":
             # svg does better charts than png
             enable_png_format = False
             enable_html_format = cmdline_opts.enable_html_format
-            enable_graphs = cmdline_opts.enable_graphs and enable_html_format
+            enable_graphs = False
+            # If attribute does not exist because required library not installed
+            # then siliently catch the exception.
+            try:
+                enable_graphs = cmdline_opts.enable_graphs and enable_html_format
+            except AttributeError:
+                pass
+
             # A function to merge dictionaries.
             def merge_dicts(dict_org, dict_to_merge):
                 if (not dict_to_merge):
@@ -421,11 +428,8 @@ if __name__ == "__main__":
                     plugin.write(html_format=enable_html_format)
                     if (not cmdline_opts.disable_std_out):
                         plugin.console()
-                    try:
-                        if (enable_graphs):
-                            plugin.graph(enable_png_format)
-                    except AttributeError:
-                        pass
+                    if (enable_graphs):
+                        plugin.graph(enable_png_format)
                     warnings =  merge_dicts(warnings, plugin.get_warnings())
             output_warnings(warnings, disable_std_out=cmdline_opts.disable_std_out, html_format=enable_html_format)
     except KeyboardInterrupt:
