@@ -1,4 +1,16 @@
 #!/usr/bin/python
+"""
+@author    : Shane Bradley
+@contact   : sbradley@redhat.com
+@copyright : GPLv3
+
+* This plugin outputs the number of snapshots taken for a filesystem, the start
+  time, and end time or last snapshot taken.
+
+* This plugin outputs the filesystem name, time when snapshot taken when dlm
+  activity is greater than zero.
+
+"""
 import logging
 import logging.handlers
 import os.path

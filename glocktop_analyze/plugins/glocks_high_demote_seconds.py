@@ -1,4 +1,12 @@
 #!/usr/bin/python
+"""
+@author    : Shane Bradley
+@contact   : sbradley@redhat.com
+@copyright : GPLv3
+
+* This plugin outputs any demote_second value greater than zero for a glock.
+
+"""
 import logging
 import logging.handlers
 import os.path

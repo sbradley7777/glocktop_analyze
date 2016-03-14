@@ -1,4 +1,16 @@
 #!/usr/bin/python
+"""
+@author    : Shane Bradley
+@contact   : sbradley@redhat.com
+@copyright : GPLv3
+
+* This plugin outputs only a graph of glocks holder+waiter count over time.
+
+Options for plugin:
+* mininum_waiter_count: The mininum number of holder + waiters that are required
+  on a glock.
+* maximum_glocks_to_graph: The maximum number of different glocks that will be graph.
+"""
 import logging
 import logging.handlers
 import os.path
@@ -12,7 +24,7 @@ from glocktop_analyze.html import generate_graph_index_page
 
 class GlocksWaitersTime(Plugin):
     OPTIONS = [("mininum_waiter_count",
-                "The mininum number of holder + waiters that are required on a glock",
+                "The mininum number of holder + waiters that are required on a glock.",
                 2),
                ("maximum_glocks_to_graph",
                 "The maximum number of different glocks that will be graph.",

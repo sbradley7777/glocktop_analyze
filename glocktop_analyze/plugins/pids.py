@@ -1,4 +1,20 @@
 #!/usr/bin/python
+"""
+@author    : Shane Bradley
+@contact   : sbradley@redhat.com
+@copyright : GPLv3
+
+* This plugin outputs the different glocks that had a pid as a waiter or holder.
+* This plugin outputs the different pids that were listed as waiter or holder
+  for a glock.
+
+Options for this plugin:
+* mininum_snapshot_count: The mininum number of times a pid shows up in all
+  snapshots.
+* mininum_glocks_count: The mininum number of different glocks a pid shows up
+  in.
+
+"""
 import logging
 import logging.handlers
 import os.path

@@ -1,6 +1,15 @@
 #!/usr/bin/python
 """
-This class only counts the number of times that a glock is in a snapshot.
+@author    : Shane Bradley
+@contact   : sbradley@redhat.com
+@copyright : GPLv3
+
+* This plugin outputs the number of times that a glock appears in all snapshots.
+
+Options for the plugin:
+* mininum_glocks_in_snapshots: The mininum number of times a glock is found in
+  all the snapshots.
+
 """
 import logging
 import logging.handlers

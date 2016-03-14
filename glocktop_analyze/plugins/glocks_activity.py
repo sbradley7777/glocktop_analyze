@@ -1,4 +1,18 @@
 #!/usr/bin/python
+"""
+@author    : Shane Bradley
+@contact   : sbradley@redhat.com
+@copyright : GPLv3
+
+* This plugin outputs the raw lockdump data. It outputs in a simpler view of the
+  data and has option to only output glocks that have minimum holder+waiters
+  count for a snapshot.
+
+Options for this plugin:
+* mininum_waiter_count: The glock's lockdump analyzed for multiple holder and
+  waiters.
+
+"""
 import logging
 import logging.handlers
 import os.path
