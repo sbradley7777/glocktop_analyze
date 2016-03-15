@@ -111,6 +111,8 @@ def generate_graph_index_page(path_to_output_dir, path_to_graphs, title):
             figure_code += figure_code_pre_png
         figure_code += "graphs/%s%s" %(os.path.split(path_to_image_file)[1], figure_code_post)
     html_data = "%s%s%s" %(generate_header(), figure_code, generate_footer_graphs())
+    print title
+    print "%s.html" %(title.replace(" - ", "-").replace(" ", "_").lower())
     path_to_html_file = os.path.join(path_to_output_dir, "%s.html" %(title.replace(" - ", "-").replace(" ", "_").lower()))
     if (write_to_file(path_to_html_file, html_data, append_to_file=False, create_file=True)):
         message = "The html page containing the graphs was written to: %s" %(path_to_html_file)

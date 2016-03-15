@@ -287,7 +287,7 @@ if __name__ == "__main__":
             for plugin in plugins:
                 plugins_str += "  %s: %s\n" %(ColorizeConsoleText.red(plugin.get_name()), plugin.get_description())
             if (plugins_str):
-                print "\nThe plugins installed are:"
+                print "The plugins installed are:"
                 print plugins_str.rstrip()
             else:
                 message = "There was no plugins found."

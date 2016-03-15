@@ -150,7 +150,7 @@ def generate_date_graphs(path_to_output_dir, x_axis, y_axis_map, title, x_axis_t
                 message = "The format svg will be used instead."
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).info(message)
         if (not png_format_rendered):
-            path_to_image_file = os.path.join(path_to_output_dir, "%s_stat.svg" %(title.replace(" ", "_").lower()))
+            path_to_image_file = os.path.join(path_to_output_dir, "%s_stat.svg" %(title.replace(" - ", "-").replace(" ", "_").lower()))
             message = "Writing graph to %s" %(path_to_image_file)
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
             graph.render_to_file(path_to_image_file)

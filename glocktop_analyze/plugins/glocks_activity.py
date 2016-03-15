@@ -78,7 +78,7 @@ class GlocksActivity(Plugin):
                     if (colorize):
                         current_summary_title = "<b>%s</b>" %(str(snapshot))
                     summary += "%s<BR/>%s" %(current_summary_title, current_summary)
-        header =  "<center><H3>Glock Activity between"
+        header =  "<center><H3>Glock Activity between "
         header += "%s and %s </H3></center>" %(start_time.strftime("%Y-%m-%d %H:%M:%S"),
                                                end_time.strftime("%Y-%m-%d %H:%M:%S"))
         return header + summary
