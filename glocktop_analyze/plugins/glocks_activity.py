@@ -47,11 +47,13 @@ class GlocksActivity(Plugin):
                         current_summary += "     %s\n" %(holder)
                     if (not glock.get_glock_object() == None):
                         current_summary += "     %s\n" %(glock.get_glock_object())
-                if (current_summary):
-                    current_summary_title = str(snapshot)
-                    if (colorize):
-                        current_summary_title = ColorizeConsoleText.red(str(snapshot))
-                    summary += "%s\n%s\n" %(current_summary_title, current_summary)
+            if (current_summary):
+                current_summary_title = str(snapshot)
+                if (colorize):
+                    current_summary_title = ColorizeConsoleText.red(str(snapshot))
+                summary += "%s\n%s\n" %(current_summary_title, current_summary)
+                print "%s\n%s\n" %(current_summary_title, current_summary)
+                print "----------------"
         return summary
 
     def __get_html(self, colorize=False):
@@ -73,11 +75,11 @@ class GlocksActivity(Plugin):
                     if (not glock.get_glock_object() == None):
                         current_summary += "&nbsp;&nbsp;&nbsp;&nbsp; %s<BR/>" %(glock.get_glock_object())
                     current_summary += "<BR/>"
-                if (current_summary):
-                    current_summary_title = str(snapshot)
-                    if (colorize):
-                        current_summary_title = "<b>%s</b>" %(str(snapshot))
-                    summary += "%s<BR/>%s" %(current_summary_title, current_summary)
+            if (current_summary):
+                current_summary_title = str(snapshot)
+                if (colorize):
+                    current_summary_title = "<b>%s</b>" %(str(snapshot))
+                summary += "%s<BR/>%s" %(current_summary_title, current_summary)
         header =  "<center><H3>Glock Activity between "
         header += "%s and %s </H3></center>" %(start_time.strftime("%Y-%m-%d %H:%M:%S"),
                                                end_time.strftime("%Y-%m-%d %H:%M:%S"))
