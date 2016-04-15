@@ -1,7 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-"""The utility merges GFS2 filesystem lockdumps from the "glocks" to a format
-that can be used by the glocktop_analyze.py script.
+"""
+The utility merges GFS2 filesystem lockdumps (glocks files)
+captured with "gfs2_lockcapture" to a format that can be processed
+with "glocktop_analyze.py" script.
 
 This script assumes data was captured with gfs2_lockcapture:
 - https://git.fedorahosted.org/cgit/gfs2-utils.git/tree/gfs2/scripts/gfs2_lockcapture
@@ -10,11 +12,6 @@ This script assumes data was captured with gfs2_lockcapture:
 @contact   : sbradley@redhat.com
 @version   : 0.1
 @copyright : GPLv3
-
-
-TODO:
-* Figure out how to merge full path to glocks files into the
-  find_glocks_dumps() or something like that.
 
 """
 import sys
@@ -210,7 +207,7 @@ def __get_options(cmd_parser) :
     cmd_parser.add_option("-p", "--path_to_filename",
                           action="extend",
                           dest="path_to_src_files",
-                          help="the path to the filename that will be parsed or directory containing glocktop files",
+                          help="the path to the directory containing data captured by gfs2_lockcapture",
                           type="string",
                           metavar="<input filename>",
                           default=[])
@@ -230,8 +227,8 @@ def __get_options(cmd_parser) :
 class OptionParserExtended(OptionParser):
     def __init__(self, version) :
         self.__command_name = os.path.basename(sys.argv[0])
-        description =  "The utility merges GFS2 filesystem lockdumps from the \"glocks\" to a format "
-        description += "that can be used by the glocktop_analyze.py script."
+        description =  "The utility merges GFS2 filesystem lockdumps captured with \"gfs2_lockcapture\" to "
+        description += "format that can be processed by the \"glocktop_analyze.py\" script."
 
         OptionParser.__init__(self, option_class=ExtendOption,
                               version="%s %s\n" %(self.__command_name, version),
@@ -288,13 +285,18 @@ if __name__ == "__main__":
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).setLevel(logging.DEBUG)
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug("Debugging has been enabled.")
 
-
         # #######################################################################
         # Merge all the "glocks" files found.
         # #######################################################################
         merged_glocks_dump_files = []
         for filename in cmdline_opts.path_to_src_files:
-            if (os.path.isdir(filename)):
+            found_glocks_dump_files = False
+            current_merged_gd_files = []
+            if (os.path.isfile(filename)):
+                message = "The -p option requires a path to a directory and file found: %s" %(filename)
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).warning(message)
+                continue
+            elif (os.path.isdir(filename)):
                 message = "Searching for glock lockdumps under the directory: %s" %(filename)
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).info(message)
                 # If there are "hostinformation.txt" files then we know data
@@ -303,19 +305,21 @@ if __name__ == "__main__":
                 glocks_dumps = find_glocks_dumps(filename)
                 for key in glocks_dumps.keys():
                     gsds = glocks_dumps.get(key)
-                    path_to_merged_file = gsds.merge_glock_dumps(cmdline_opts.path_to_output_dir)
-                    if (path_to_merged_file):
-                        merged_glocks_dump_files += path_to_merged_file
-
-
+                    current_merged_gd_files += gsds.merge_glock_dumps(cmdline_opts.path_to_output_dir)
+            if (current_merged_gd_files):
+                merged_glocks_dump_files += current_merged_gd_files
+            else:
+                message = "There was no glocks dump files found under the path: %s" %(filename)
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).warning(message)
+        # Print the result
         if (merged_glocks_dump_files):
             print "The following files were created from merged GFS2 glock dumps:"
             for merged_gsds_file in merged_glocks_dump_files:
                 print "\t%s" %(merged_gsds_file)
         else:
-            message = "There was no valid GFS2 lockdump files that were merged."
+            message = "There was no valid GFS2 lockdump files merged."
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
-            message = "A path to file or directory with the \"-p\" option that contains file(s) for GFS2 lockdumps is required."
+            message = "A path (-p option) to the directory that contains the data captured by \"gfs2_lockcapture\" is required."
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).info(message)
             sys.exit(1)
 
