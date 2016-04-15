@@ -43,8 +43,9 @@ class Snapshot():
         if (not self.__show_ended_process_and_tlocks):
             glocks_not_ended_process = []
             for g in self.__glocks:
-                if (not ((g.has_ended_process()) or (g.get_type() == 1))):
-                    glocks_not_ended_process.append(g)
+                if (not g == None):
+                    if (not ((g.has_ended_process()) or (g.get_type() == 1))):
+                        glocks_not_ended_process.append(g)
             return glocks_not_ended_process
         return self.__glocks
 

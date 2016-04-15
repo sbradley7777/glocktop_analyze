@@ -319,7 +319,7 @@ def tableize(rows, header, colorize=True):
             formatted_table += row_string + "\n"
     return formatted_table
 
-def get_data_from_file(path_to_filename) :
+def get_data_from_file(path_to_filename, strip_leading_character=True) :
     if (len(path_to_filename) > 0) :
         try:
             fin = open(path_to_filename, "r")
@@ -327,7 +327,10 @@ def get_data_from_file(path_to_filename) :
             fin.close()
             mod_data = []
             for line in data:
-                mod_data.append(line.strip())
+                if (strip_leading_character):
+                    mod_data.append(line.strip())
+                else:
+                    mod_data.append(line.rstrip())
             return mod_data
         except (IOError, os.error):
             message = "An error occured reading the file: %s." %(path_to_filename)

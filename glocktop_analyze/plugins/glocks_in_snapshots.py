@@ -46,6 +46,8 @@ class GlocksInSnapshots(Plugin):
     def analyze(self):
         glocks_in_snapshots = {}
         for snapshot in self.get_snapshots():
+            message = "There was %d glocks found on the filesystem: %s." %(len(snapshot.get_glocks()), self.get_filesystem_name())
+            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
             for glock in snapshot.get_glocks():
                 hashkey = self.__encode(glock.get_type(), glock.get_inode())
                 if (not glocks_in_snapshots.has_key(hashkey)):
@@ -55,6 +57,7 @@ class GlocksInSnapshots(Plugin):
         for pair in sorted(glocks_in_snapshots.items(), key=itemgetter(1), reverse=True):
             if (pair[1] >= self.__minimum_glocks_in_snapshots):
                 self.__table.append([self.get_filesystem_name(), pair[0], pair[1]])
+
 
     def console(self):
         if (self.__table):

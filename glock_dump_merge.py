@@ -182,8 +182,10 @@ def find_glocks_dumps(path_to_dir):
                     gparent_dir = os.path.split(os.path.split(path_to_glockfile)[0])[1]
                     cluster_name = gparent_dir.split(":")[0]
                     gfs2_name = gparent_dir.split(":")[1]
-                    #if (is_valid_lockdump_file(path_to_glockfile)):
-                    gsds.append(GlocksDump(hostname, nodename, date_time, cluster_name, gfs2_name, path_to_glockfile))
+                    message = "Checking to see if the following files is a valid glock dump: %s" %(path_to_glockfile)
+                    logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+                    if (is_valid_lockdump_file(path_to_glockfile)):
+                        gsds.append(GlocksDump(hostname, nodename, date_time, cluster_name, gfs2_name, path_to_glockfile))
     glocks_dumps = {}
     for glocks_dump in gsds:
         if (not glocks_dumps.has_key(glocks_dump.get_hostname())):
@@ -307,6 +309,7 @@ if __name__ == "__main__":
 
 
         if (merged_glocks_dump_files):
+            print "The following files were created from merged GFS2 glock dumps:"
             for merged_gsds_file in merged_glocks_dump_files:
                 print "\t%s" %(merged_gsds_file)
         else:
