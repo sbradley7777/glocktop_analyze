@@ -64,10 +64,11 @@ def process_snapshot(snapshot, snapshot_lines):
         for sline in snapshot_lines:
             if (sline.startswith("G")):
                 glock = parse_glock(sline)
-                snapshot.add_glock(glock)
+                if (not glock == None):
+                    snapshot.add_glock(glock)
             elif (not glock == None and sline.startswith("H")):
                 glock_holder = parse_glock_holder(sline)
-                if (not glock_holder == None):
+                if (not (glock_holder == None)):
                     glock.add_holder(glock_holder)
             elif ((not glock == None) and
                   (sline.startswith("I") or
