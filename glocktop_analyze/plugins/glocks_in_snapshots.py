@@ -4,7 +4,9 @@
 @contact   : sbradley@redhat.com
 @copyright : GPLv3
 
-* This plugin outputs the number of times that a glock appears in all snapshots.
+* This plugin outputs the number of times that a glock appears in all
+  snapshots. Requires that at least 1 holder, waiter, or object is attached to
+  glock
 
 Options for the plugin:
 * mininum_glocks_in_snapshots: The mininum number of times a glock is found in
@@ -49,10 +51,13 @@ class GlocksInSnapshots(Plugin):
             message = "There was %d glocks found on the filesystem: %s." %(len(snapshot.get_glocks()), self.get_filesystem_name())
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
             for glock in snapshot.get_glocks():
-                hashkey = self.__encode(glock.get_type(), glock.get_inode())
-                if (not glocks_in_snapshots.has_key(hashkey)):
-                    glocks_in_snapshots[hashkey] = 0
-                glocks_in_snapshots[hashkey] += 1
+                # Require that glock is has at least an object of holder or
+                # waiter assoicated with it.
+                if (len(glock.get_holders()) or (not glock.get_glock_object() == None)):
+                    hashkey = self.__encode(glock.get_type(), glock.get_inode())
+                    if (not glocks_in_snapshots.has_key(hashkey)):
+                        glocks_in_snapshots[hashkey] = 0
+                    glocks_in_snapshots[hashkey] += 1
         self.__table = []
         for pair in sorted(glocks_in_snapshots.items(), key=itemgetter(1), reverse=True):
             if (pair[1] >= self.__minimum_glocks_in_snapshots):
