@@ -11,6 +11,7 @@ import re
 from glocktop_analyze.glock import Glock, GlockHolder
 
 def parse_glock(line):
+    # This regex works glocktop output but does not work on regular glock dumps.
     #regex = re.compile("^G:  s:(?P<state>\S+) n:(?P<type>\d)/(?P<inodeNumber>\S+)\s" + \
     #                    "f:(?P<flags>\S*)\st:(?P<target>\S+)\sd:(?P<demote_state>\S+)/" + \
     #                   "(?P<demote_time>\d+)( l:(?P<lvbs>\d+))?\sa:(?P<ails>\d+)" +\
@@ -23,6 +24,7 @@ def parse_glock(line):
     regex = re.compile("^G:  s:(?P<state>\S+) n:(?P<type>\d)/(?P<inodeNumber>\S+)\s" + \
                         "f:(?P<flags>\S*)\st:(?P<target>\S+)\sd:(?P<demote_state>\S+)/" + \
                        "(?P<demote_time>\d+)( l:(?P<lvbs>\d+))?\sa:(?P<ails>\d+)" +\
+                       "( v:(?P<v>\d+))?\sr:(?P<refs>\d+)(\sm:(?P<hold>\d+))" + \
                        ".*")
     mo = regex.match(line)
     if mo:
