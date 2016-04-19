@@ -55,6 +55,7 @@ from glocktop_analyze.plugins.glocks_high_demote_seconds import GlocksHighDemote
 from glocktop_analyze.plugins.glocks_in_snapshots import GlocksInSnapshots
 from glocktop_analyze.plugins.glocks_waiters_time import GlocksWaitersTime
 from glocktop_analyze.plugins.pids import Pids
+from glocktop_analyze.plugins.glocks_dependencies import GlocksDependencies
 
 # #####################################################################
 # Global variables
@@ -132,7 +133,8 @@ def get_plugins(snapshots, path_to_output_dir, options):
             GlocksHighDemoteSeconds(snapshots, path_to_output_dir, options),
             GlocksInSnapshots(snapshots, path_to_output_dir, options),
             GlocksWaitersTime(snapshots, path_to_output_dir, options),
-            Pids(snapshots, path_to_output_dir, options)]
+            Pids(snapshots, path_to_output_dir, options),
+            GlocksDependencies(snapshots, path_to_output_dir, options)]
 
 # ##############################################################################
 # Get user selected options

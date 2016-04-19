@@ -52,7 +52,7 @@ class GlocksActivity(Plugin):
                 if (colorize):
                     current_summary_title = ColorizeConsoleText.red(str(snapshot))
                 summary += "%s\n%s\n" %(current_summary_title, current_summary)
-                print "%s\n%s\n" %(current_summary_title, current_summary)
+                print "%s\n%s" %(current_summary_title, current_summary)
                 print "----------------"
         return summary
 
