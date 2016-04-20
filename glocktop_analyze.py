@@ -72,7 +72,7 @@ def output_warnings(warnings, disable_std_out=True, html_format=False):
             for wkey in warnings.keys():
                 warnings_str += "%s\n" %(ColorizeConsoleText.red(wkey))
                 for item in warnings.get(wkey):
-                    warnings_str += "\t%s\n" %(item)
+                    warnings_str += "  - %s\n" %(item)
             print ColorizeConsoleText.red("Warnings Found:\n") +  warnings_str
         wdata = ""
         path_to_output_file = ""
@@ -81,7 +81,7 @@ def output_warnings(warnings, disable_std_out=True, html_format=False):
             for wkey in warnings.keys():
                 wdata += "%s\n" %(wkey)
                 for item in warnings.get(wkey):
-                    wdata += "\t%s\n" %(item)
+                    wdata += "  - %s\n" %(item)
             wdata = "Warnings Found:\n" +  wdata
         else:
             path_to_output_file = os.path.join(path_to_output_dir, "warnings.html")

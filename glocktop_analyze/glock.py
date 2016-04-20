@@ -85,10 +85,11 @@ GLOCK_HOLDER_FLAGS_DESCRIPTION = {"t":"A try lock.",
                                   "W":"Set while waiting for request to complete.",
                                   "F":"Set when holder is first to be granted for this glock."}
 class Glock():
-    def __init__(self, gtype, inode, state, demote_time):
+    def __init__(self, gtype, inode, state, demote_state, demote_time):
         self.__type = gtype
         self.__inode = inode
         self.__state = state
+        self.__demote_state = demote_state
         self.__demote_time = demote_time
 
         # This list contains the holder and other waiting to be holders(waiters)
@@ -96,11 +97,12 @@ class Glock():
         self.__glock_object = None
 
     def __str__(self):
-        return "G: (%s/%s) state: %s | demote_time: %sms | hw count: %d" %(self.get_type(),
-                                                                           self.get_inode(),
-                                                                           self.get_state(),
-                                                                           self.get_demote_time(),
-                                                                           len(self.get_holders()))
+        return "G: (%s/%s) state: %s | demote_state: %s | demote_time: %sms | hw count: %d" %(self.get_type(),
+                                                                                              self.get_inode(),
+                                                                                              self.get_state(),
+                                                                                              self.get_demote_state(), 
+                                                                                              self.get_demote_time(),
+                                                                                              len(self.get_holders()))
 
     def get_type(self):
         return self.__type
@@ -110,6 +112,9 @@ class Glock():
 
     def get_state(self):
         return self.__state
+
+    def get_demote_state(self):
+        return self.__demote_state
 
     def get_demote_time(self):
         return self.__demote_time

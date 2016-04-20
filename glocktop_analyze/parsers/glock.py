@@ -28,7 +28,7 @@ def parse_glock(line):
                        ".*")
     mo = regex.match(line)
     if mo:
-        return Glock(int(mo.group("type")), mo.group("inodeNumber"), mo.group("state"), mo.group("demote_time"))
+        return Glock(int(mo.group("type")), mo.group("inodeNumber"), mo.group("state"), mo.group("demote_state"), mo.group("demote_time"))
     return None
     parse_glock = staticmethod(parse_glock)
 
