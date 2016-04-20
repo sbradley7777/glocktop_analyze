@@ -45,8 +45,6 @@ class PidGlocksInSnapshot:
     def get_pidglocks_all(self):
         return self.__list_of_pidglocks
 
-
-
 class PidGlocks:
     # This object represents all glocks that have holder holding a glocks and is
     # for a particular process..
@@ -116,19 +114,6 @@ class GlocksDependencies(Plugin):
         return (hashkey_split[0], hashkey_split[1])
 
     def analyze(self):
-        # Inodes is not what i need to key off of. It is pid, as inode glock
-        # would be waiting on resource group for different inode. For each
-        # snapshot, need to see if a pid is waiting on multiple glocks.
-
-        # key off pids then find relationships with the glocks assocaiated with
-        # that pid within that snapshot.
-
-        # Change the code below, key is pid.
-
-        # Need to do per snapshot, so in that snapshot is inode waiting on rgrp
-        # or whatever? MOVED pids_to_glocks dict to inside snapshot for now.
-
-        # Need to keep in data structure the filesystem/date and time.
         for snapshot in self.get_snapshots():
             map_of_pidglocks = {}
             pids_with_holder_flag = []
@@ -161,10 +146,15 @@ class GlocksDependencies(Plugin):
                     self.__glocks_dependencies_snapshot_map[filesystem_name] = []
                 self.__glocks_dependencies_snapshot_map[filesystem_name].append(pidglocks_in_snapshot)
 
-    def console(self):
-        # Need to have self.__get_text() so write plain text files like glock_activity.
+    def __get_text(self, colorize=False):
+        # Need to add warning:
+        summary = ""
+        glock_contention_warning = []
         for key in self.__glocks_dependencies_snapshot_map.keys():
-            print "%s: The glock dependencies for pid with glock's with holder flag. " %(ColorizeConsoleText.red(key))
+            if (colorize):
+                summary += "%s: The glock dependencies for pid with glock's with holder flag.\n" %(ColorizeConsoleText.red(key))
+            else:
+                summary += "%s: The glock dependencies for pid with glock's with holder flag.\n" %(key)
             pidglocks_in_snapshot_list = self.__glocks_dependencies_snapshot_map.get(key)
             if (pidglocks_in_snapshot_list):
                 for pidglocks_in_snapshot in pidglocks_in_snapshot_list:
@@ -187,14 +177,45 @@ class GlocksDependencies(Plugin):
                             pid_header =  "  %s (%s) | " %(pidglocks.get_pid(), pidglocks.get_command())
                             pid_header += "%d glocks associated with pid " %(len(pidglocks.get_glocks()))
                             pid_header += "(%d glock holders)\n" %(glock_holder_flag_found)
-
-                            snapshot_summary += "%s%s" %(ColorizeConsoleText.orange(pid_header), pid_summary)
+                            
+                            if (colorize):
+                                snapshot_summary += "%s%s" %(ColorizeConsoleText.orange(pid_header), pid_summary)
+                            else:
+                                snapshot_summary += "%s%s" %(pid_header, pid_summary)
                     if (snapshot_summary):
-                        print ColorizeConsoleText.red("%s@%s %s" %(pidglocks_in_snapshot.get_filesystem_name(),
-                                                                   pidglocks_in_snapshot.get_hostname(),
-                                                                   pidglocks_in_snapshot.get_date_time()))
-                        print snapshot_summary
+                        # Add filesystem as possible lock contention candidate.
+                        if (not pidglocks_in_snapshot.get_filesystem_name() in glock_contention_warning):
+                            glock_contention_warning.append(pidglocks_in_snapshot.get_filesystem_name())
+                        fs_header = "%s@%s %s" %(pidglocks_in_snapshot.get_filesystem_name(),
+                                                    pidglocks_in_snapshot.get_hostname(),
+                                                    pidglocks_in_snapshot.get_date_time())
+                        if (colorize):
+                            fs_header =  ColorizeConsoleText.red(fs_header)
+                        summary += "%s\n%s\n" %(fs_header, snapshot_summary)
 
+        # Need to move out
+        if (glock_contention_warning):
+            for fs_name in glock_contention_warning:
+                self.add_warning("Glocks", "Possible glock lock contention found on filesystem: %s." %(pidglocks_in_snapshot.get_filesystem_name()))
+        return summary
+
+    def console(self):
+        summary = self.__get_text(colorize=True)
+        if (summary):
+            print "%s\n" %(summary.rstrip())
 
     def write(self, html_format=False):
-        pass
+        wdata = ""
+        path_to_output_file = ""
+        if (not html_format):
+            wdata = self.__get_text(colorize=False)
+            filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
+            path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+                                                            self.get_filesystem_name()), filename)
+
+        else:
+            pass
+        if (wdata):
+            if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
+                message = "An error occurred writing to the file: %s" %(path_to_output_file)
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
