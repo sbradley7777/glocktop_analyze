@@ -52,20 +52,13 @@ class GlocksActivity(Plugin):
                 if (colorize):
                     current_summary_title = ColorizeConsoleText.red(str(snapshot))
                 summary += "%s\n%s\n" %(current_summary_title, current_summary)
-                print "%s\n%s" %(current_summary_title, current_summary)
-                print "----------------"
-        return summary
+        return summary.rstrip("----------------")
 
     def __get_html(self, colorize=False):
         summary = ""
-        start_time = None
-        end_time = None
         for snapshot in self.get_snapshots():
             current_summary = ""
             glocks = snapshot.get_glocks()
-            if (start_time == None):
-                start_time = snapshot.get_date_time()
-            end_time = snapshot.get_date_time()
             for glock in glocks:
                 glock_holders = glock.get_holders()
                 if (len(glock_holders) >= self.__mininum_waiter_count):
@@ -81,20 +74,24 @@ class GlocksActivity(Plugin):
                     current_summary_title = "<b>%s</b>" %(str(snapshot))
                 summary += "%s<BR/>%s" %(current_summary_title, current_summary)
         header =  "<center><H3>Glock Activity between "
-        header += "%s and %s </H3></center>" %(start_time.strftime("%Y-%m-%d %H:%M:%S"),
-                                               end_time.strftime("%Y-%m-%d %H:%M:%S"))
+        header += "%s and %s </H3></center>" %(self.get_snapshots_start_time().strftime("%Y-%m-%d %H:%M:%S"),
+                                               self.get_snapshots_end_time().strftime("%Y-%m-%d %H:%M:%S"))
         return header + summary
 
     def console(self):
         summary = self.__get_text(colorize=True)
         if (summary):
-            print "%s\n" %(summary.rstrip())
+            header = "%s: %s\n" %(self.get_title(), self.get_description())
+            print "%s%s\n\n" %(header, summary.rstrip())
 
     def write(self, html_format=False):
         wdata = ""
         path_to_output_file = ""
         if (not html_format):
             wdata = self.__get_text(colorize=False)
+            if (wdata):
+                header = "%s: %s\n" %(self.get_title(), self.get_description())
+                wdata = "%s%s\n" %(header, wdata.rstrip())
             filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
             path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                             self.get_filesystem_name()), filename)

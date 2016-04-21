@@ -32,6 +32,10 @@ class Plugin(object):
         self.__warnings = {}
 
         self.__options = {}
+
+        self.__snapshots_start_time, self.__snapshots_end_time = self.__get_snapshots_times()
+
+
         if hasattr(self, "OPTIONS"):
             # Populate the options with default value.
             for plugin_option in self.OPTIONS:
@@ -56,6 +60,15 @@ class Plugin(object):
                                     logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
                 except IndexError:
                     pass
+
+    def __get_snapshots_times(self):
+        snapshots_start_time = None
+        snapshots_end_time = None
+        for snapshot in self.get_snapshots():
+            if (snapshots_start_time == None):
+                snapshots_start_time = snapshot.get_date_time()
+            snapshots_end_time = snapshot.get_date_time()
+        return snapshots_start_time, snapshots_end_time
 
     def get_name(self):
         return self.__name
@@ -91,6 +104,12 @@ class Plugin(object):
         if (not self.__warnings.has_key(wtype)):
             self.__warnings[wtype] = []
         self.__warnings[wtype].append(description)
+
+    def get_snapshots_start_time(self):
+        return self.__snapshots_start_time
+
+    def get_snapshots_end_time(self):
+        return self.__snapshots_end_time
 
     def analyze(self):
         pass
