@@ -44,24 +44,31 @@ class Snapshots(Plugin):
                 self.__dlm_activity.append([self.get_filesystem_name(), snapshot.get_date_time(), dlm_activity.get_waiter_count()])
 
     def console(self):
+        summary = ""
         if (self.get_snapshots()):
-            print tableize([[self.get_filesystem_name(), str(self.__count), self.__start_time, self.__stop_time]],
-                           ["Filesystem", "Snapshots", "Start Time", "Stop Time"])
+            summary += "%s\n\n" %(tableize([[self.get_filesystem_name(), str(self.__count),
+                                             self.__start_time, self.__stop_time]],
+                                           ["Filesystem", "Snapshots", "Start Time", "Stop Time"]).strip())
         if (self.__dlm_activity):
-            print tableize(self.__dlm_activity, ["Filesystem", "Snapshot Time", "Number of DLM Waiters"])
+            summary += "%s\n\n" %(tableize(self.__dlm_activity, ["Filesystem", "Snapshot Time",
+                                                                 "Number of DLM Waiters"]).strip())
+        if (summary):
+            print "%s: %s\n%s\n" %(self.get_title(), self.get_description(), summary.strip())
 
     def write(self, html_format=False):
         if (not html_format):
             wdata = ""
             if (self.__count > 0):
-                wdata += tableize([[self.get_filesystem_name(), str(self.__count), self.__start_time,
-                                    self.__stop_time]],
-                                  ["Filesystem", "Snapshots", "Start Time", "Stop Time"], colorize=False) + "\n"
+                wdata += "%s\n\n" %(tableize([[self.get_filesystem_name(), str(self.__count),
+                                               self.__start_time, self.__stop_time]],
+                                             ["Filesystem", "Snapshots",
+                                              "Start Time", "Stop Time"], colorize=False).strip())
             if (self.__dlm_activity):
-                wdata += tableize(self.__dlm_activity,
-                                  ["Filesystem", "Snapshot Time", "Number of DLM Waiters"],
-                                  colorize=False) + "\n"
+                wdata += "%s\n\n" %(tableize(self.__dlm_activity,
+                                             ["Filesystem", "Snapshot Time", "Number of DLM Waiters"],
+                                             colorize=False).strip())
             if (wdata):
+                wdata = "%s: %s\n%s\n" %(self.get_title(), self.get_description(), wdata.strip())
                 filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                                 self.get_filesystem_name()), filename)

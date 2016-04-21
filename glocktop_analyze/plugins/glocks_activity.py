@@ -52,7 +52,8 @@ class GlocksActivity(Plugin):
                 if (colorize):
                     current_summary_title = ColorizeConsoleText.red(str(snapshot))
                 summary += "%s\n%s\n" %(current_summary_title, current_summary)
-        return summary.rstrip("----------------")
+        return "%s: %s\n%s" %(self.get_title(), self.get_description(), 
+                              summary.rstrip("----------------"))
 
     def __get_html(self, colorize=False):
         summary = ""
@@ -81,17 +82,13 @@ class GlocksActivity(Plugin):
     def console(self):
         summary = self.__get_text(colorize=True)
         if (summary):
-            header = "%s: %s\n" %(self.get_title(), self.get_description())
-            print "%s%s\n\n" %(header, summary.rstrip())
+            print "%s\n" %(summary.rstrip())
 
     def write(self, html_format=False):
         wdata = ""
         path_to_output_file = ""
         if (not html_format):
             wdata = self.__get_text(colorize=False)
-            if (wdata):
-                header = "%s: %s\n" %(self.get_title(), self.get_description())
-                wdata = "%s%s\n" %(header, wdata.rstrip())
             filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
             path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                             self.get_filesystem_name()), filename)

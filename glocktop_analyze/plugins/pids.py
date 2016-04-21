@@ -87,32 +87,41 @@ class Pids(Plugin):
                 self.__pids_using_multiple_glocks.append([self.get_filesystem_name(), pid, command, len(items[1].split()), items[1]])
 
     def console(self):
+        summary = ""
         if (self.__pids_in_snapshots):
-            print tableize(self.__pids_in_snapshots,
-                           ["Filesystem", "Pid", "Command", "Number of Snapshots Appeared in"])
+            summary += "%s\n\n" %(tableize(self.__pids_in_snapshots,
+                                           ["Filesystem", "Pid", "Command",
+                                            "Number of Snapshots Appeared in"]).strip())
 
         if (self.__pids_using_multiple_glocks):
             ftable = []
             for row in self.__pids_using_multiple_glocks:
                 ftable += tableify(row)
-            print tableize(ftable,
-                           ["Filesystem", "Pid", "Command", "Number of Glocks Appeared in", "Glock Type/Inode"])
+            summary += "%s\n\n" %(tableize(ftable,
+                                           ["Filesystem", "Pid", "Command",
+                                            "Number of Glocks Appeared in",
+                                            "Glock Type/Inode"]).strip())
+        if (summary):
+            print "%s: %s\n%s\n" %(self.get_title(), self.get_description(), summary.strip())
 
     def write(self, html_format=False):
         if (not html_format):
             wdata = ""
             if (self.__pids_in_snapshots):
-                wdata += tableize(self.__pids_in_snapshots,
-                                  ["Filesystem", "Pid", "Command", "Number of Snapshots Appeared in"],
-                                  colorize=True) + "\n"
+                wdata += "%s\n\n" %(tableize(self.__pids_in_snapshots,
+                                             ["Filesystem", "Pid", "Command",
+                                              "Number of Snapshots Appeared in"],
+                                             colorize=True).strip())
             if (self.__pids_using_multiple_glocks):
                 ftable = []
                 for row in self.__pids_using_multiple_glocks:
                     ftable += tableify(row)
-                wdata += tableize(ftable,
-                                  ["Filesystem", "Pid", "Command", "Number of Glocks Appeared in", "Glock Type/Inode"],
-                                  colorize=False)
+                wdata += "%s\n\n" %(tableize(ftable,
+                                             ["Filesystem", "Pid", "Command",
+                                              "Number of Glocks Appeared in", "Glock Type/Inode"],
+                                             colorize=False).strip())
             if (wdata):
+                wdata = "%s: %s\n%s\n" %(self.get_title(), self.get_description(), wdata.strip())
                 filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                                 self.get_filesystem_name()), filename)

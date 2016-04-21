@@ -16,9 +16,8 @@ from operator import itemgetter
 
 import glocktop_analyze
 from glocktop_analyze.plugins import Plugin
-from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
-from glocktop_analyze.html import generate_table_header, generate_table
-from glocktop_analyze.html import generate_footer
+from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file
+from glocktop_analyze.html import generate_header, generate_footer
 
 class PidGlocksInSnapshot:
     def __init__(self, list_of_pidglocks):
@@ -98,7 +97,7 @@ class GlocksDependencies(Plugin):
     def __init__(self, snapshots, path_to_output_dir, options):
         Plugin.__init__(self, "glocks_dependencies",
                         "A dependency graph of a glocks for a pid.",
-                        snapshots, "Glocks Tree", path_to_output_dir,
+                        snapshots, "Glocks Dependencies", path_to_output_dir,
                         options)
         self.__glocks_dependencies_snapshot_map = {}
 
@@ -177,7 +176,7 @@ class GlocksDependencies(Plugin):
                             pid_header =  "  %s (%s) | " %(pidglocks.get_pid(), pidglocks.get_command())
                             pid_header += "%d glocks associated with pid " %(len(pidglocks.get_glocks()))
                             pid_header += "(%d glock holders)\n" %(glock_holder_flag_found)
-                            
+
                             if (colorize):
                                 snapshot_summary += "%s%s" %(ColorizeConsoleText.orange(pid_header), pid_summary)
                             else:
@@ -197,7 +196,10 @@ class GlocksDependencies(Plugin):
         if (glock_contention_warning):
             for fs_name in glock_contention_warning:
                 self.add_warning("Glocks", "Possible glock lock contention found on filesystem: %s." %(pidglocks_in_snapshot.get_filesystem_name()))
-        return summary
+        return "%s: %s\n%s" %(self.get_title(), self.get_description(), summary)
+
+    def __get_html(self, colorize=False):
+        return ""
 
     def console(self):
         summary = self.__get_text(colorize=True)
@@ -214,7 +216,12 @@ class GlocksDependencies(Plugin):
                                                             self.get_filesystem_name()), filename)
 
         else:
-            pass
+            bdata = self.__get_html(colorize=True)
+            wdata = "%s\n%s\n<BR/><HR/><BR/>%s" %(generate_header(), bdata, generate_footer())
+
+            filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
+            path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+                                                            self.get_filesystem_name()), filename)
         if (wdata):
             if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
                 message = "An error occurred writing to the file: %s" %(path_to_output_file)

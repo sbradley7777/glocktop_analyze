@@ -66,7 +66,9 @@ class GlocksInSnapshots(Plugin):
 
     def console(self):
         if (self.__table):
-            print tableize(self.__table, ["Filesystem Name", "Glock Type/Glocks Inode", "Number of Snapshots Appeared in"])
+            print "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
+                  tableize(self.__table, ["Filesystem Name", "Glock Type/Glocks Inode",
+                                          "Number of Snapshots Appeared in"]).strip())
 
     def write(self, html_format=False):
         if (self.__table):
@@ -76,7 +78,9 @@ class GlocksInSnapshots(Plugin):
                 filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                                 self.get_filesystem_name()), filename)
-                wdata = tableize(self.__table, ["Filesystem Name", "Glock Type/Glocks Inode", "Number of Snapshots Appeared in"], colorize=False)
+                wdata = "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
+                                         tableize(self.__table, ["Filesystem Name", "Glock Type/Glocks Inode",
+                                                                 "Number of Snapshots Appeared in"]).strip())
             else:
                 filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),

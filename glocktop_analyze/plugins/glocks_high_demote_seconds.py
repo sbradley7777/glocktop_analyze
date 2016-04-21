@@ -72,7 +72,10 @@ class GlocksHighDemoteSeconds(Plugin):
 
     def console(self):
         if (self.__table):
-            print tableize(self.__table,["Filesystem", "Snapshots", "Demote Seconds"])
+            print "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
+                                   tableize(self.__table,["Filesystem", "Snapshots",
+                                                          "Demote Seconds"]).strip())
+
 
     def write(self, html_format=False):
         if (self.__table):
@@ -82,7 +85,9 @@ class GlocksHighDemoteSeconds(Plugin):
                 filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                                 self.get_filesystem_name()), filename)
-                wdata = tableize(self.__table,["Filesystem", "Snapshots", "Demote Seconds"], colorize=False)
+                wdata = "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
+                                         tableize(self.__table,["Filesystem", "Snapshots",
+                                                                "Demote Seconds"], colorize=False))
 
             else:
                 filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))

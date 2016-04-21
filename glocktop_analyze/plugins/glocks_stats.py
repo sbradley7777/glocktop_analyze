@@ -98,7 +98,8 @@ class GSStats(Plugin):
             console_summary += "%s\n%s\n\n" %(ColorizeConsoleText.orange(
                 filesystem_name), formatted_table)
         if (console_summary):
-            print "%s\n" %(console_summary.rstrip())
+            print "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
+                                   console_summary.strip())
 
     def write(self, html_format=False):
         file_summary = ""
@@ -111,6 +112,9 @@ class GSStats(Plugin):
                 glocks_stats = snapshot.get_glocks_stats()
                 file_summary +=  "Glock stats at %s for filesystem: " %(glocks_stats.get_date_time().strftime("%Y-%m-%d %H:%M:%S"))
                 file_summary += "%s\n%s\n\n" %(filesystem_name, str(glocks_stats))
+            if (file_summary):
+                file_summary = "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
+                                                file_summary.strip())
         else:
             bdata = ""
             filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
