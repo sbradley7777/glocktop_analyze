@@ -17,14 +17,15 @@ from operator import itemgetter
 import glocktop_analyze
 from glocktop_analyze.plugins import Plugin
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file
-from glocktop_analyze.html import generate_header, generate_footer
+from glocktop_analyze.html import generate_footer
+from glocktop_analyze.html import generate_css_header
 
 class PidGlocksInSnapshot:
-    def __init__(self, list_of_pidglocks):
+    def __init__(self, list_of_pidglocks, hostname, filesystem_name, date_time):
         self.__list_of_pidglocks = list_of_pidglocks
-        self.__hostname = self.__list_of_pidglocks[0].get_hostname()
-        self.__filesystem_name = self.__list_of_pidglocks[0].get_filesystem_name()
-        self.__date_time  = self.__list_of_pidglocks[0].get_date_time()
+        self.__hostname = hostname
+        self.__filesystem_name = filesystem_name
+        self.__date_time  = date_time
 
     def __str__(self):
         rstring = "%s:%s @%s\n" %(self.get_hostname(),
@@ -46,21 +47,14 @@ class PidGlocksInSnapshot:
 
 class PidGlocks:
     # This object represents all glocks that have holder holding a glocks and is
-    # for a particular process..
-    def __init__(self, pid, command, hostname, filesystem_name, date_time):
+    # for a particular process for a snapshot.
+    def __init__(self, pid, command):
         self.__pid = pid
         self.__command = command
-        self.__hostname = hostname
-        self.__filesystem_name = filesystem_name
-        self.__date_time  = date_time
         self.__glocks = []
 
     def __str__(self):
-        rstring = "%s:%s @%s | pid: %s command: %s\n" %(self.get_hostname(),
-                                                        self.get_filesystem_name(),
-                                                        self.get_date_time(),
-                                                        self.get_pid(),
-                                                        self.get_command())
+        rstring = "pid: %s command: %s\n" %(self.get_pid(), self.get_command())
         for glock in self.get_glocks():
             rstring += "  %s\n" %(glock)
             for h in glock.get_holders():
@@ -76,15 +70,6 @@ class PidGlocks:
     def get_command(self):
         return self.__command
 
-    def get_hostname(self):
-        return self.__hostname
-
-    def get_filesystem_name(self):
-        return self.__filesystem_name
-
-    def get_date_time(self):
-        return self.__date_time
-
     def get_glocks(self):
         return self.__glocks
 
@@ -99,9 +84,7 @@ class GlocksDependencies(Plugin):
                         "A dependency graph of a glocks for a pid.",
                         snapshots, "Glocks Dependencies", path_to_output_dir,
                         options)
-        self.__glocks_dependencies_snapshot_map = {}
-
-        self.__minimum_glocks_in_snapshots = self.get_option("mininum_glocks_in_snapshots")
+        self.__glocks_dependencies_snapshots = []
 
     def __encode(self, pid, command):
         # Not sure what guranteees no duplicates, that command will not be empty
@@ -121,10 +104,7 @@ class GlocksDependencies(Plugin):
                     hashkey = self.__encode(glock_holder.get_pid(), glock_holder.get_command())
                     if (not map_of_pidglocks.has_key(hashkey)):
                         map_of_pidglocks[hashkey] = PidGlocks(glock_holder.get_pid(),
-                                                              glock_holder.get_command(),
-                                                              snapshot.get_hostname(),
-                                                              snapshot.get_filesystem_name(),
-                                                              snapshot.get_date_time())
+                                                              glock_holder.get_command())
                     map_of_pidglocks[hashkey].add_glock(glock)
                     if (not glock.get_glock_holder() == None):
                         if (not hashkey in pids_with_holder_flag):
@@ -139,67 +119,110 @@ class GlocksDependencies(Plugin):
                         list_of_pidglocks.append(map_of_pidglocks.get(k))
             # Add to map that sorted into filesystem bin.
             if (list_of_pidglocks):
-                pidglocks_in_snapshot = PidGlocksInSnapshot(list_of_pidglocks)
-                filesystem_name = pidglocks_in_snapshot.get_filesystem_name()
-                if (not self.__glocks_dependencies_snapshot_map.has_key(filesystem_name)):
-                    self.__glocks_dependencies_snapshot_map[filesystem_name] = []
-                self.__glocks_dependencies_snapshot_map[filesystem_name].append(pidglocks_in_snapshot)
+                filesystem_name = snapshot.get_filesystem_name()
+                pidglocks_in_snapshot = PidGlocksInSnapshot(list_of_pidglocks, snapshot.get_hostname(),
+                                                            filesystem_name, snapshot.get_date_time())
+                self.__glocks_dependencies_snapshots.append(pidglocks_in_snapshot)
+
+        if (self.__glocks_dependencies_snapshots):
+            warning_msg = "Possible glock lock contention found on filesystem: %s." %(self.get_filesystem_name())
+            self.add_warning("Glocks", warning_msg)
 
     def __get_text(self, colorize=False):
         # Need to add warning:
         summary = ""
-        glock_contention_warning = []
-        for key in self.__glocks_dependencies_snapshot_map.keys():
-            if (colorize):
-                summary += "%s: The glock dependencies for pid with glock's with holder flag.\n" %(ColorizeConsoleText.red(key))
-            else:
-                summary += "%s: The glock dependencies for pid with glock's with holder flag.\n" %(key)
-            pidglocks_in_snapshot_list = self.__glocks_dependencies_snapshot_map.get(key)
-            if (pidglocks_in_snapshot_list):
-                for pidglocks_in_snapshot in pidglocks_in_snapshot_list:
-                    snapshot_summary = ""
-                    # Review all the glocks for a particular pid.
-                    for pidglocks in pidglocks_in_snapshot.get_pidglocks_all():
-                        pid_summary = ""
-                        glock_holder_flag_found = 0
-                        for glock in pidglocks.get_glocks():
-                            pid_summary += "    %s\n" %(glock)
-                            for h in glock.get_holders():
-                                pid_summary += "      %s\n" %(h)
-                            glock_object = glock.get_glock_object()
-                            if (not glock_object == None):
-                                pid_summary += "      %s\n" %(glock_object)
-                            if (not glock.get_glock_holder() == None):
-                                glock_holder_flag_found += 1
+        for pidglocks_in_snapshot in self.__glocks_dependencies_snapshots:
+            snapshot_summary = ""
+            # Review all the glocks for a particular pid.
+            for pidglocks in pidglocks_in_snapshot.get_pidglocks_all():
+                pid_summary = ""
+                glock_holder_flag_found = 0
+                for glock in pidglocks.get_glocks():
+                    pid_summary += "    %s\n" %(glock)
+                    for h in glock.get_holders():
+                        pid_summary += "      %s\n" %(h)
+                    glock_object = glock.get_glock_object()
+                    if (not glock_object == None):
+                        pid_summary += "      %s\n" %(glock_object)
+                    if (not glock.get_glock_holder() == None):
+                        glock_holder_flag_found += 1
 
-                        if (pid_summary):
-                            pid_header =  "  %s (%s) | " %(pidglocks.get_pid(), pidglocks.get_command())
-                            pid_header += "%d glocks associated with pid " %(len(pidglocks.get_glocks()))
-                            pid_header += "(%d glock holders)\n" %(glock_holder_flag_found)
-
-                            if (colorize):
-                                snapshot_summary += "%s%s" %(ColorizeConsoleText.orange(pid_header), pid_summary)
-                            else:
-                                snapshot_summary += "%s%s" %(pid_header, pid_summary)
-                    if (snapshot_summary):
-                        # Add filesystem as possible lock contention candidate.
-                        if (not pidglocks_in_snapshot.get_filesystem_name() in glock_contention_warning):
-                            glock_contention_warning.append(pidglocks_in_snapshot.get_filesystem_name())
-                        fs_header = "%s@%s %s" %(pidglocks_in_snapshot.get_filesystem_name(),
-                                                    pidglocks_in_snapshot.get_hostname(),
-                                                    pidglocks_in_snapshot.get_date_time())
-                        if (colorize):
-                            fs_header =  ColorizeConsoleText.red(fs_header)
-                        summary += "%s\n%s\n" %(fs_header, snapshot_summary)
-
-        # Need to move out
-        if (glock_contention_warning):
-            for fs_name in glock_contention_warning:
-                self.add_warning("Glocks", "Possible glock lock contention found on filesystem: %s." %(pidglocks_in_snapshot.get_filesystem_name()))
-        return "%s: %s\n%s" %(self.get_title(), self.get_description(), summary)
+                if (pid_summary):
+                    pid_header =  "  pid: %s command: %s | " %(pidglocks.get_pid(), pidglocks.get_command())
+                    pid_header += "%d glocks associated with pid " %(len(pidglocks.get_glocks()))
+                    pid_header += "(%d glock holders)\n" %(glock_holder_flag_found)
+                    if (colorize):
+                        pid_header = ColorizeConsoleText.orange(pid_header)
+                    snapshot_summary += "%s%s\n" %(pid_header, pid_summary)
+            if (snapshot_summary):
+                snapshot_header = "%s - %s @%s" %(pidglocks_in_snapshot.get_filesystem_name(),
+                                                  pidglocks_in_snapshot.get_date_time(),
+                                                  pidglocks_in_snapshot.get_hostname())
+                if (colorize):
+                    snapshot_header =  ColorizeConsoleText.red(snapshot_header)
+                summary += "%s\n%s\n\n" %(snapshot_header, snapshot_summary.strip())
+        if (summary):
+            summary = "%s: %s\n%s" %(self.get_title(), self.get_description(), summary)
+        return summary
 
     def __get_html(self, colorize=False):
-        return ""
+        summary = ""
+        for pidglocks_in_snapshot in self.__glocks_dependencies_snapshots:
+            snapshot_summary = ""
+            # Review all the glocks for a particular pid.
+            for pidglocks in pidglocks_in_snapshot.get_pidglocks_all():
+                pid_summary = ""
+                glock_holder_flag_found = 0
+                for glock in pidglocks.get_glocks():
+                    pid_summary += "<b>&nbsp;&nbsp;%s</b><BR/>" %(glock)
+                    for h in glock.get_holders():
+                        pid_summary += "&nbsp;&nbsp;&nbsp;&nbsp;%s<BR/>" %(h)
+                    glock_object = glock.get_glock_object()
+                    if (not glock_object == None):
+                        pid_summary += "&nbsp;&nbsp;&nbsp;&nbsp;%s<BR/>" %(glock_object)
+                    if (not glock.get_glock_holder() == None):
+                        glock_holder_flag_found += 1
+
+                if (pid_summary):
+                    pid_header =  "<span class=\"orange\">&nbsp;&nbsp;pid: %s command: %s | " %(pidglocks.get_pid(), pidglocks.get_command())
+                    pid_header += "%d glocks associated with pid " %(len(pidglocks.get_glocks()))
+                    pid_header += "(%d glock holders)</span>" %(glock_holder_flag_found)
+                    snapshot_summary += "<b>%s</b><BR/>%s<BR/>" %(pid_header, pid_summary)
+                if (snapshot_summary):
+                    snapshot_header = "%s - %s @%s" %(pidglocks_in_snapshot.get_filesystem_name(),
+                                                             pidglocks_in_snapshot.get_date_time(),
+                                                             pidglocks_in_snapshot.get_hostname())
+                summary += "<b><span class=\"red\">%s</span></b><BR/>%s" %(snapshot_header, snapshot_summary.strip())
+        """
+        for snapshot in self.get_snapshots():
+            current_summary = ""
+            glocks = snapshot.get_glocks()
+            for glock in glocks:
+                glock_holders = glock.get_holders()
+                if (len(glock_holders) >= self.__mininum_waiter_count):
+                    current_summary += "  %s<BR/>" %(glock)
+                    for holder in glock_holders:
+                        current_summary += "&nbsp;&nbsp;&nbsp;&nbsp; %s<BR/>" %(holder)
+                    if (not glock.get_glock_object() == None):
+                        current_summary += "&nbsp;&nbsp;&nbsp;&nbsp; %s<BR/>" %(glock.get_glock_object())
+                    current_summary += "<BR/>"
+            if (current_summary):
+                current_summary_title = str(snapshot)
+                if (colorize):
+                    current_summary_title = "<b>%s</b>" %(str(snapshot))
+                summary += "%s<BR/>%s" %(current_summary_title, current_summary)
+        header =  "<center><H3>Glock Activity between "
+        header += "%s and %s </H3></center>" %(self.get_snapshots_start_time().strftime("%Y-%m-%d %H:%M:%S"),
+                                               self.get_snapshots_end_time().strftime("%Y-%m-%d %H:%M:%S"))
+        return header + summary
+        """
+
+        if (summary):
+            header =  "<center><H3>Glocks Dependencies between "
+            header += "%s and %s </H3></center>" %(self.get_snapshots_start_time().strftime("%Y-%m-%d %H:%M:%S"),
+                                                   self.get_snapshots_end_time().strftime("%Y-%m-%d %H:%M:%S"))
+            summary = "<center><b>%s:</b> %s</center><BR/>%s" %(self.get_title(), self.get_description(), summary)
+        return header + summary
 
     def console(self):
         summary = self.__get_text(colorize=True)
@@ -217,7 +240,7 @@ class GlocksDependencies(Plugin):
 
         else:
             bdata = self.__get_html(colorize=True)
-            wdata = "%s\n%s\n<BR/><HR/><BR/>%s" %(generate_header(), bdata, generate_footer())
+            wdata = "%s\n%s\n<BR/><HR/><BR/>%s" %(generate_css_header(), bdata, generate_footer())
 
             filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
             path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),

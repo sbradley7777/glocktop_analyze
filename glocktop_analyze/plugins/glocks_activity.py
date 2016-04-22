@@ -20,7 +20,7 @@ import os.path
 import glocktop_analyze
 from glocktop_analyze.plugins import Plugin
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file
-from glocktop_analyze.html import generate_header, generate_footer
+from glocktop_analyze.html import generate_css_header, generate_footer
 
 class GlocksActivity(Plugin):
     OPTIONS = [("mininum_waiter_count",
@@ -52,7 +52,7 @@ class GlocksActivity(Plugin):
                 if (colorize):
                     current_summary_title = ColorizeConsoleText.red(str(snapshot))
                 summary += "%s\n%s\n" %(current_summary_title, current_summary)
-        return "%s: %s\n%s" %(self.get_title(), self.get_description(), 
+        return "%s: %s\n%s" %(self.get_title(), self.get_description(),
                               summary.rstrip("----------------"))
 
     def __get_html(self, colorize=False):
@@ -63,7 +63,7 @@ class GlocksActivity(Plugin):
             for glock in glocks:
                 glock_holders = glock.get_holders()
                 if (len(glock_holders) >= self.__mininum_waiter_count):
-                    current_summary += "  %s<BR/>" %(glock)
+                    current_summary += "<b>&nbsp;&nbsp;%s</b><BR/>" %(glock)
                     for holder in glock_holders:
                         current_summary += "&nbsp;&nbsp;&nbsp;&nbsp; %s<BR/>" %(holder)
                     if (not glock.get_glock_object() == None):
@@ -72,7 +72,7 @@ class GlocksActivity(Plugin):
             if (current_summary):
                 current_summary_title = str(snapshot)
                 if (colorize):
-                    current_summary_title = "<b>%s</b>" %(str(snapshot))
+                    current_summary_title = "<b><span class=\"red\">%s</span></b>" %(str(snapshot))
                 summary += "%s<BR/>%s" %(current_summary_title, current_summary)
         header =  "<center><H3>Glock Activity between "
         header += "%s and %s </H3></center>" %(self.get_snapshots_start_time().strftime("%Y-%m-%d %H:%M:%S"),
@@ -95,7 +95,7 @@ class GlocksActivity(Plugin):
 
         else:
             bdata = self.__get_html(colorize=True)
-            wdata = "%s\n%s\n<BR/><HR/><BR/>%s" %(generate_header(), bdata, generate_footer())
+            wdata = "%s\n%s\n<BR/><HR/><BR/>%s" %(generate_css_header(), bdata, generate_footer())
 
             filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
             path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),

@@ -16,6 +16,19 @@ from glocktop_analyze.utilities import LogWriter, mkdirs, write_to_file
 def generate_header():
     return "<html>\n\t<head>\n\t</head>\n\t<body>\n"
 
+def generate_css_header():
+    style =  "<style>\n"
+    style += "span.red {"
+    style += "color:#ff0000;"
+    style += "}\n"
+    style += "span.orange {"
+    style += "color:#ffa500;"
+    style += "}\n"
+    style += "</style>\n"
+    header_pre = "<html>\n\t<head>\n"
+    header_post = "</head>\n\t<body>\n"
+    return "%s\n%s\n%s\n" %(header_pre, style, header_post)
+
 def generate_table_header():
     style =  "<style>\n"
     style += "table, th, td {\n"
@@ -45,7 +58,12 @@ def generate_table_header():
     style += "color: white;\n"
     style += "}\n"
 
+    style += "span.red {"
+    style += "color:#ff0000;"
+    style += "}\n"
     style += "</style>\n"
+
+
     header_pre = "<html>\n\t<head>\n"
     header_post = "</head>\n\t<body>\n"
     return "%s%s%s" %(header_pre, style, header_post)
