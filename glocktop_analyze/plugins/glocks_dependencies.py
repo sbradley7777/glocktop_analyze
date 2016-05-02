@@ -222,7 +222,8 @@ class GlocksDependencies(Plugin):
             header += "%s and %s </H3></center>" %(self.get_snapshots_start_time().strftime("%Y-%m-%d %H:%M:%S"),
                                                    self.get_snapshots_end_time().strftime("%Y-%m-%d %H:%M:%S"))
             summary = "<center><b>%s:</b> %s</center><BR/>%s" %(self.get_title(), self.get_description(), summary)
-        return header + summary
+            summary = "%s%s" %(header, summary)
+        return summary
 
     def console(self):
         summary = self.__get_text(colorize=True)

@@ -34,7 +34,7 @@ def parse_snapshot(line, show_ended_process_and_tlocks=False):
     if mo:
         date_time = datetime.strptime("%s %s %s %s" %(mo.group("month"), mo.group("dow"), mo.group("year"), mo.group("time")), "%b %d %Y %H:%M:%S")
         split_line = mo.group("hostname").strip().split("dlm:")
-        hostname = split_line[0]
+        hostname = split_line[0].strip()
         # Check to see if DLM data is at end of string contained in hostname
         # group.
 
