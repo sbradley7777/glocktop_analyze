@@ -39,7 +39,8 @@ logger = LogWriter(glocktop_analyze.MAIN_LOGGER_NAME,
                    glocktop_analyze.MAIN_LOGGER_FORMAT,
                    disableConsoleLog=False)
 
-from glocktop_analyze.utilities import ColorizeConsoleText, get_data_from_file, tableize, write_to_file
+from glocktop_analyze.utilities import ColorizeConsoleText, get_data_from_file
+from glocktop_analyze.utilities import tableize, write_to_file, merge_dicts
 import glocktop_analyze.glocks_stats
 from glocktop_analyze.snapshot import Snapshot, DLMActivity
 from glocktop_analyze.glock import Glock, GlockHolder, GlockObject
@@ -65,7 +66,7 @@ VERSION_NUMBER = "0.1-7"
 # #####################################################################
 # Global functions
 # #####################################################################
-def output_warnings(warnings, disable_std_out=True, html_format=False):
+def __output_warnings(warnings, disable_std_out=True, html_format=False):
     if (warnings):
         if (not disable_std_out):
             warnings_str = ""
@@ -100,8 +101,81 @@ def output_warnings(warnings, disable_std_out=True, html_format=False):
                 message = "An error occurred writing the file: %s" %(path_to_output_file)
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
 
-def get_options(user_options):
-    plugins = get_plugins([], "", {})
+# #####################################################################
+# Functions that analyze the files for data
+# #####################################################################
+def __analyze_file(path_to_output_file, gfs2_filesystem_names, show_ended_process_and_tlocks):
+    #All the snapshots for all the filesystems.
+    snapshots_by_filesystem = {}
+    # The glock that will have a container for all the lines associated with
+    # the glock.
+    gfs2_snapshot = None
+    # The lines that are related to this snapshot of the
+    # filesystem. Including glocks, waiters, etc.
+    snapshot_lines = []
+    lines = get_data_from_file(path_to_filename)
+    for line in lines:
+        # @, G, H, I, R, B, U, C, S
+        if ((line.startswith("@")) or (not len(line) > 0)):
+            if (not gfs2_snapshot == None):
+                # Process any previous snapshot lines before starting a
+                # new one. All the glocks, holder/waiters, etc.
+                if ((not gfs2_filesystem_names) or
+                    (gfs2_snapshot.get_filesystem_name().strip() in gfs2_filesystem_names)):
+                    process_snapshot(gfs2_snapshot, snapshot_lines)
+                    if (not snapshots_by_filesystem.has_key(gfs2_snapshot.get_filesystem_name())):
+                        snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()] = []
+                    snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()].append(gfs2_snapshot)
+            # Process the new snapshot
+            gfs2_snapshot = parse_snapshot(line, show_ended_process_and_tlocks)
+            snapshot_lines = []
+        else:
+            snapshot_lines.append(line)
+    # Process any remaining items
+    if (not gfs2_snapshot == None):
+        if ((not gfs2_filesystem_names) or
+            (gfs2_snapshot.get_filesystem_name().strip() in gfs2_filesystem_names)):
+            process_snapshot(gfs2_snapshot, snapshot_lines)
+            if (not snapshots_by_filesystem.has_key(gfs2_snapshot.get_filesystem_name())):
+                snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()] = []
+            snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()].append(gfs2_snapshot)
+    return snapshots_by_filesystem
+
+# ##############################################################################
+# Plugins
+# ##############################################################################
+def __get_plugins(snapshots, path_to_output_dir, options):
+    return [GlocksActivity(snapshots, path_to_output_dir, options),
+            GSStats(snapshots, path_to_output_dir, options),
+            Snapshots(snapshots, path_to_output_dir, options),
+            GlocksHighDemoteSeconds(snapshots, path_to_output_dir, options),
+            GlocksInSnapshots(snapshots, path_to_output_dir, options),
+            GlocksWaitersTime(snapshots, path_to_output_dir, options),
+            Pids(snapshots, path_to_output_dir, options),
+            GlocksDependencies(snapshots, path_to_output_dir, options)]
+
+def __plugins_run(snapshots_by_filesystem, path_to_output_dir,
+                  enable_html_format, enable_png_format, enable_graphs):
+    warnings = {}
+    # Loop over all the filesystems and plugins.
+    for filesystem_name in snapshots_by_filesystem.keys():
+        snapshots = snapshots_by_filesystem.get(filesystem_name)
+        plugins = __get_plugins(snapshots, path_to_output_dir, options)
+        for plugin in plugins:
+            plugin.analyze()
+            plugin.write(html_format=enable_html_format)
+            if (not cmdline_opts.disable_std_out):
+                plugin.console()
+            if (enable_graphs):
+                plugin.graph(enable_png_format)
+            warnings =  merge_dicts(warnings, plugin.get_warnings())
+    return warnings
+
+# ##############################################################################
+# Get user selected options and plugin options
+# ##############################################################################
+def __get_plugin_options(user_options):
+    plugins = __get_plugins([], "", {})
     options = {}
     for option in user_options:
         option_split = option.rsplit("=", 1)
@@ -126,20 +200,7 @@ def get_options(user_options):
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
     return options
 
-def get_plugins(snapshots, path_to_output_dir, options):
-    return [GlocksActivity(snapshots, path_to_output_dir, options),
-            GSStats(snapshots, path_to_output_dir, options),
-            Snapshots(snapshots, path_to_output_dir, options),
-            GlocksHighDemoteSeconds(snapshots, path_to_output_dir, options),
-            GlocksInSnapshots(snapshots, path_to_output_dir, options),
-            GlocksWaitersTime(snapshots, path_to_output_dir, options),
-            Pids(snapshots, path_to_output_dir, options),
-            GlocksDependencies(snapshots, path_to_output_dir, options)]
-
-# ##############################################################################
-# Get user selected options
-# ##############################################################################
-def __get_options(cmd_parser) :
+def __get_cmdline_options(cmd_parser) :
     cmd_parser.add_option("-d", "--debug",
                           action="store_true",
                           dest="enableDebugLogging",
@@ -271,7 +332,7 @@ if __name__ == "__main__":
         # Get the options from the commandline.
         # #######################################################################
         cmd_parser = OptionParserExtended(VERSION_NUMBER)
-        (cmdline_opts, cmdline_args) = __get_options(cmd_parser)
+        (cmdline_opts, cmdline_args) = __get_cmdline_options(cmd_parser)
 
         # #######################################################################
         # Set the logging levels.
@@ -283,7 +344,7 @@ if __name__ == "__main__":
         # List all the plugins found and their corresponding options.
         if (cmdline_opts.show_plugins_list):
             cmd_parser.print_version()
-            plugins = get_plugins([], "", {})
+            plugins = __get_plugins([], "", {})
 
             plugins_str = ""
             for plugin in plugins:
@@ -342,98 +403,43 @@ if __name__ == "__main__":
             sys.exit(1)
 
         # #######################################################################
-        # Analyze the files.
+        # Get the values for the plugin options
         # #######################################################################
-        options = get_options(cmdline_opts.plugins_options)
+        enable_html_format = cmdline_opts.enable_html_format
+        # svg does better charts than png
+        enable_png_format = False
+        enable_graphs = False
+        try:
+            # If attribute does not exist because required library not installed
+            # then siliently catch the exception.
+            enable_graphs = cmdline_opts.enable_graphs and enable_html_format
+        except AttributeError:
+            pass
+
+        options = __get_plugin_options(cmdline_opts.plugins_options)
+        # #######################################################################
+        # Analyze the files and then run plugin against the data.
+        # #######################################################################
         for path_to_filename in path_to_filenames:
             message ="The file will be analyzed: %s" %(path_to_filename)
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
-            lines = get_data_from_file(path_to_filename)
-            #All the snapshots for all the filesystems.
-            snapshots_by_filesystem = {}
-            # The glock that will have a container for all the lines associated with
-            # the glock.
-            gfs2_snapshot = None
-            # The lines that are related to this snapshot of the
-            # filesystem. Including glocks, waiters, etc.
-            snapshot_lines = []
-            for line in lines:
-                # @, G, H, I, R, B, U, C, S
-                if ((line.startswith("@")) or (not len(line) > 0)):
-                    if (not gfs2_snapshot == None):
-                        # Process any previous snapshot lines before starting a
-                        # new one. All the glocks, holder/waiters, etc.
-                        if ((not cmdline_opts.gfs2_filesystem_names) or
-                            (gfs2_snapshot.get_filesystem_name().strip() in cmdline_opts.gfs2_filesystem_names)):
-                            process_snapshot(gfs2_snapshot, snapshot_lines)
-                            if (not snapshots_by_filesystem.has_key(gfs2_snapshot.get_filesystem_name())):
-                                snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()] = []
-                            snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()].append(gfs2_snapshot)
-                    # Process the new snapshot
-                    gfs2_snapshot = parse_snapshot(line, cmdline_opts.show_ended_process_and_tlocks)
-                    snapshot_lines = []
-                else:
-                    snapshot_lines.append(line)
-
-            # The path to directory where all files written for this host will
-            # be written.
-            path_to_output_dir = cmdline_opts.path_to_output_dir
-            # Process any remaining items
-            if (not gfs2_snapshot == None):
-                if ((not cmdline_opts.gfs2_filesystem_names) or
-                    (gfs2_snapshot.get_filesystem_name().strip() in cmdline_opts.gfs2_filesystem_names)):
-                    process_snapshot(gfs2_snapshot, snapshot_lines)
-                    if (not snapshots_by_filesystem.has_key(gfs2_snapshot.get_filesystem_name())):
-                        snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()] = []
-                    snapshots_by_filesystem[gfs2_snapshot.get_filesystem_name()].append(gfs2_snapshot)
-                    # Set the path to output dir to include hostname in last item processed.
-                    path_to_output_dir = os.path.join(cmdline_opts.path_to_output_dir, gfs2_snapshot.get_hostname())
+            snapshots_by_filesystem = __analyze_file(path_to_filename,
+                                                     cmdline_opts.gfs2_filesystem_names,
+                                                     cmdline_opts.show_ended_process_and_tlocks)
+            # Set the path to output dir.
+            path_to_output_dir = ""
+            if (snapshots_by_filesystem.keys()):
+                 hostname = snapshots_by_filesystem[snapshots_by_filesystem.keys()[0]][0].get_hostname()
+                 path_to_output_dir = os.path.join(cmdline_opts.path_to_output_dir, hostname)
             message ="The analyzing of the file is complete."
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
 
-            # #######################################################################
-            # Analyze, print, write, and graph stats
-            # #######################################################################
-            # svg does better charts than png
-            enable_png_format = False
-            enable_html_format = cmdline_opts.enable_html_format
-            enable_graphs = False
-            # If attribute does not exist because required library not installed
-            # then siliently catch the exception.
-            try:
-                enable_graphs = cmdline_opts.enable_graphs and enable_html_format
-            except AttributeError:
-                pass
-
-            # A function to merge dictionaries.
-            def merge_dicts(dict_org, dict_to_merge):
-                if (not dict_to_merge):
-                    return dict_org
-                for key in dict_to_merge.keys():
-                    if (not dict_org.has_key(key) or dict_org == None):
-                        dict_org[key] = []
-                    value_org = dict_org[key]
-                    value_merge = dict_to_merge[key]
-                    for value in value_merge:
-                        if (not value in value_org):
-                            value_org.append(value)
-                return dict_org
-
-            # A container for all the warnings found on the filesystem.
-            warnings = {}
-            # Loop over all the filesystems and plugins.
-            for filesystem_name in snapshots_by_filesystem.keys():
-                snapshots = snapshots_by_filesystem.get(filesystem_name)
-                plugins = get_plugins(snapshots, path_to_output_dir, options)
-                for plugin in plugins:
-                    plugin.analyze()
-                    plugin.write(html_format=enable_html_format)
-                    if (not cmdline_opts.disable_std_out):
-                        plugin.console()
-                    if (enable_graphs):
-                        plugin.graph(enable_png_format)
-                    warnings =  merge_dicts(warnings, plugin.get_warnings())
-            output_warnings(warnings, disable_std_out=cmdline_opts.disable_std_out, html_format=enable_html_format)
+            # All the warnings found on the filesystem after plugins have ran.
+            warnings = __plugins_run(snapshots_by_filesystem, path_to_output_dir,
+                                     enable_html_format, enable_png_format, enable_graphs)
+            __output_warnings(warnings,
+                              disable_std_out=cmdline_opts.disable_std_out,
+                              html_format=enable_html_format)
     except KeyboardInterrupt:
         print ""
         message =  "This script will exit since control-c was executed by end user."
