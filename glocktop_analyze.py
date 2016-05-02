@@ -46,9 +46,10 @@ from glocktop_analyze.snapshot import Snapshot, DLMActivity
 from glocktop_analyze.glock import Glock, GlockHolder, GlockObject
 from glocktop_analyze.glocks_stats import GlocksStats, GlockStat
 from glocktop_analyze.parsers.snapshot import parse_snapshot, process_snapshot
-
+from glocktop_analyze.parsers.rawfile import get_hostname, get_filesystems
 from glocktop_analyze.html import generate_header, generate_footer
 
+# Plugins
 from glocktop_analyze.plugins.glocks_activity import GlocksActivity
 from glocktop_analyze.plugins.glocks_stats import GSStats
 from glocktop_analyze.plugins.snapshots import Snapshots
@@ -232,6 +233,11 @@ def __get_cmdline_options(cmd_parser) :
                           type="string",
                           metavar="<gfs2 filesystem name>",
                           default=[])
+    cmd_parser.add_option("-A", "--disable_group_analysis",
+                          action="store_false",
+                          dest="enable_group_analysis",
+                          help="disable group filesystem analysis of all files found",
+                          default=True)
     cmd_parser.add_option("-I", "--show_ended_process_and_tlocks",
                           action="store_true",
                           dest="show_ended_process_and_tlocks",
@@ -440,6 +446,64 @@ if __name__ == "__main__":
             __output_warnings(warnings,
                               disable_std_out=cmdline_opts.disable_std_out,
                               html_format=enable_html_format)
+        # #######################################################################
+        # Analyze the files as a group
+        # #######################################################################
+        if (cmdline_opts.enable_group_analysis):
+            # Map the hostname-filesystem -> file
+            filenames_for_hosts = {}
+            # Map the hostname -> filesystems found on the hostname
+            hosts_filesystems = {}
+            # Map the filesystem -> list of hostnames where that filesystem found.
+            filesystems_on_hosts={}
+            for path_to_filename in path_to_filenames:
+                chostname = get_hostname(path_to_filename)
+                cfilesystems = get_filesystems(path_to_filename,
+                                                cmdline_opts.gfs2_filesystem_names)
+                if (cfilesystems):
+                    filenames_for_hosts[chostname] = path_to_filename
+                    for filesystem in cfilesystems:
+                        if (not filesystems_on_hosts.has_key(filesystem)):
+                            filesystems_on_hosts[filesystem] = []
+                        filesystems_on_hosts[filesystem].append(chostname)
+                        if (not hosts_filesystems.has_key(chostname)):
+                            hosts_filesystems[chostname] = []
+                        hosts_filesystems[chostname].append(filesystem)
+
+                        fs_host_key = "%s-%s" %(chostname, filesystem)
+                        if (not filenames_for_hosts.has_key(fs_host_key)):
+                            filenames_for_hosts[fs_host_key] = []
+                        filenames_for_hosts[fs_host_key] = path_to_filename
+            # Everything is mapped.  Now need to write plugin and have it come
+            # data a certain way like in single file run over single fs. Need a
+            # couple options added to plugins: enabled/setenabled(i can do
+            # later), but need one for is_multi_node_supported(), and have
+            # defult is off so i do not have to mess with the plugins that
+            # alredy exists, Need naming convention of class/filename of plugin.
+
+            # Need option to enable/disable plugins.
+
+            # Should probably remove all this code for multinode analysis, check
+            # in with out it(include remove new -A option). Then add is
+            # multi-node() function, attriibute and commit, then start work on
+            # multinode support.
+
+            print
+            print "files: %d" %(len(path_to_filenames))
+            print
+            print filenames_for_hosts
+            print
+            print hosts_filesystems
+            print
+            print filesystems_on_hosts
+            print
+            for filesystem in filesystems_on_hosts.keys():
+                if (len(filesystems_on_hosts.get(filesystem)) > 1):
+                    hostname_str = ""
+                    for hostname in filesystems_on_hosts.get(filesystem):
+                        hostname_str += "%s " %(hostname)
+                    print "%s: %s" %(filesystem, hostname_str.strip())
+
     except KeyboardInterrupt:
         print ""
         message =  "This script will exit since control-c was executed by end user."

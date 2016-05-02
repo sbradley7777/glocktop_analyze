@@ -111,3 +111,4 @@ def process_snapshot(snapshot, snapshot_lines):
                     for glock_type in glocktop_analyze.glocks_stats.GLOCK_TYPES:
                         glocks_stats.add_stat(glock_type, glock_state, int(stat_map.get(glock_type)))
             snapshot.add_glocks_stats(glocks_stats)
+
