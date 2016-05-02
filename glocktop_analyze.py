@@ -59,6 +59,9 @@ from glocktop_analyze.plugins.glocks_waiters_time import GlocksWaitersTime
 from glocktop_analyze.plugins.pids import Pids
 from glocktop_analyze.plugins.glocks_dependencies import GlocksDependencies
 
+# Plugins that can run on multiply nodes
+from glocktop_analyze.plugins.snapshots_multinode import SnapshotsMultinode
+
 # #####################################################################
 # Global variables
 # #####################################################################
@@ -145,23 +148,27 @@ def __analyze_file(path_to_output_file, gfs2_filesystem_names, show_ended_proces
 # ##############################################################################
 # Plugins
 # ##############################################################################
-def __get_plugins(snapshots, path_to_output_dir, options):
-    return [GlocksActivity(snapshots, path_to_output_dir, options),
-            GSStats(snapshots, path_to_output_dir, options),
-            Snapshots(snapshots, path_to_output_dir, options),
-            GlocksHighDemoteSeconds(snapshots, path_to_output_dir, options),
-            GlocksInSnapshots(snapshots, path_to_output_dir, options),
-            GlocksWaitersTime(snapshots, path_to_output_dir, options),
-            Pids(snapshots, path_to_output_dir, options),
-            GlocksDependencies(snapshots, path_to_output_dir, options)]
+def __get_plugins(snapshots, path_to_output_dir, options, is_multi_node_supported=False):
+    if (is_multi_node_supported):
+        return [Snapshots(snapshots, path_to_output_dir, options)]
+    else:
+        return [GlocksActivity(snapshots, path_to_output_dir, options),
+                GSStats(snapshots, path_to_output_dir, options),
+                Snapshots(snapshots, path_to_output_dir, options),
+                GlocksHighDemoteSeconds(snapshots, path_to_output_dir, options),
+                GlocksInSnapshots(snapshots, path_to_output_dir, options),
+                GlocksWaitersTime(snapshots, path_to_output_dir, options),
+                Pids(snapshots, path_to_output_dir, options),
+                GlocksDependencies(snapshots, path_to_output_dir, options)]
 
 def __plugins_run(snapshots_by_filesystem, path_to_output_dir,
-                  enable_html_format, enable_png_format, enable_graphs):
+                  enable_html_format, enable_png_format, enable_graphs,
+                  is_multi_node_supported=False):
     warnings = {}
     # Loop over all the filesystems and plugins.
     for filesystem_name in snapshots_by_filesystem.keys():
         snapshots = snapshots_by_filesystem.get(filesystem_name)
-        plugins = __get_plugins(snapshots, path_to_output_dir, options)
+        plugins = __get_plugins(snapshots, path_to_output_dir, options, is_multi_node_supported)
         for plugin in plugins:
             plugin.analyze()
             plugin.write(html_format=enable_html_format)
@@ -474,35 +481,14 @@ if __name__ == "__main__":
                         if (not filenames_for_hosts.has_key(fs_host_key)):
                             filenames_for_hosts[fs_host_key] = []
                         filenames_for_hosts[fs_host_key] = path_to_filename
-            # Everything is mapped.  Now need to write plugin and have it come
-            # data a certain way like in single file run over single fs. Need a
-            # couple options added to plugins: enabled/setenabled(i can do
-            # later), but need one for is_multi_node_supported(), and have
-            # defult is off so i do not have to mess with the plugins that
-            # alredy exists, Need naming convention of class/filename of plugin.
-
-            # Need option to enable/disable plugins.
-
-            # Should probably remove all this code for multinode analysis, check
-            # in with out it(include remove new -A option). Then add is
-            # multi-node() function, attriibute and commit, then start work on
-            # multinode support.
-
-            print
-            print "files: %d" %(len(path_to_filenames))
-            print
-            print filenames_for_hosts
-            print
-            print hosts_filesystems
-            print
-            print filesystems_on_hosts
-            print
-            for filesystem in filesystems_on_hosts.keys():
-                if (len(filesystems_on_hosts.get(filesystem)) > 1):
-                    hostname_str = ""
-                    for hostname in filesystems_on_hosts.get(filesystem):
-                        hostname_str += "%s " %(hostname)
-                    print "%s: %s" %(filesystem, hostname_str.strip())
+            if (filenames_for_hosts.keys()):
+                # output directory is multiple_node/<filesystem_name>
+                for filesystem in filesystems_on_hosts.keys():
+                    if (len(filesystems_on_hosts.get(filesystem)) > 1):
+                        hostname_str = ""
+                        for hostname in filesystems_on_hosts.get(filesystem):
+                            hostname_str += "%s " %(hostname)
+                            print "%s: %s" %(filesystem, hostname_str.strip())
 
     except KeyboardInterrupt:
         print ""
