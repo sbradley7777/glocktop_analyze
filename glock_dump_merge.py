@@ -149,11 +149,16 @@ def is_valid_lockdump_file(path_to_filename):
 
 def find_files(directory, pattern):
     path_to_files = []
+    #message = "Searching for pattern \"%s\" under directory: %s" %(pattern, directory)
+    #logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
     for root, dirs, files in os.walk(directory):
         for basename in files:
             if fnmatch.fnmatch(basename, pattern):
                 filename = os.path.join(root, basename)
                 path_to_files.append(filename)
+    if (not path_to_files):
+        message = "Pattern not found under directory: %s" %(directory)
+        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
     return path_to_files
 
 def find_glocks_dumps(path_to_dir):
