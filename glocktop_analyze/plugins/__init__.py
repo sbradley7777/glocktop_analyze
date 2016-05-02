@@ -22,7 +22,7 @@ except (ImportError, NameError):
 # Classes
 # #######################################################################
 class Plugin(object):
-    def __init__(self, name, description, snapshots, title, path_to_output_dir, options):
+    def __init__(self, name, description, snapshots, title, path_to_output_dir, options, multiply_node_enabled=False):
         # A list of snapshots of a particular filesystem.
         self.__name = name
         self.__description = description
@@ -32,7 +32,7 @@ class Plugin(object):
         self.__warnings = {}
 
         self.__options = {}
-
+        self.__multiply_node_enabled = multiply_node_enabled
         self.__snapshots_start_time, self.__snapshots_end_time = self.__get_snapshots_times()
 
 
@@ -99,6 +99,9 @@ class Plugin(object):
         if (self.__snapshots):
             return self.__snapshots[0].get_filesystem_name()
         return ""
+
+    def is_multiply_node_enabled(self):
+        return self.__multiply_node_enabled
 
     def add_warning(self, wtype, description):
         if (not self.__warnings.has_key(wtype)):
