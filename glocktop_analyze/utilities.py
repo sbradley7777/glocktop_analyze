@@ -238,6 +238,23 @@ class ColorizeConsoleText(object):
 # ##############################################################################
 # Functions
 # ##############################################################################
+def merge_dicts(dict_org, dict_to_merge):
+    """
+    A function that merges dictionaries to together that contain lists as values
+    so that the lists do not contain duplicates.
+    """
+    if (not dict_to_merge):
+        return dict_org
+    for key in dict_to_merge.keys():
+        if (not dict_org.has_key(key) or dict_org == None):
+            dict_org[key] = []
+        value_org = dict_org[key]
+        value_merge = dict_to_merge[key]
+        for value in value_merge:
+            if (not value in value_org):
+                value_org.append(value)
+    return dict_org
+
 def tableify(row, max_last_element_strings=5):
     """
     When the last element of a list has multiple space seperate values then return
