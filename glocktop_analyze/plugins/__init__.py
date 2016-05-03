@@ -129,6 +129,10 @@ class Plugin(object):
     def graph(self, png_format=False):
         pass
 
+class PluginMultinode(Plugin):
+    def __init__(self, name, description, snapshots, title, path_to_output_dir, options):
+        Plugin.__init__(self, name, description, snapshots, title, path_to_output_dir, options, multiply_node_enabled=True)
+
 # #######################################################################
 # Functions
 # #######################################################################

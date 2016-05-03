@@ -16,17 +16,17 @@ import logging.handlers
 import os.path
 
 import glocktop_analyze
-from glocktop_analyze.plugins import Plugin
+from glocktop_analyze.plugins import PluginMultinode
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
 from glocktop_analyze.html import generate_table_header, generate_table
 from glocktop_analyze.html import generate_footer
 
-class SnapshotsMultinode(Plugin):
+class SnapshotsMultinode(PluginMultinode):
     def __init__(self, snapshots, path_to_output_dir, options):
-        Plugin.__init__(self, "snapshots multiply nodes",
-                        "The stats for the snapshots and dlm activity for multiply nodes.",
-                        snapshots, "Snapshot Stats for Mulitple Nodes", path_to_output_dir,
-                        options, True)
+        PluginMultinode.__init__(self, "snapshots multiply nodes",
+                                 "The stats for the snapshots and dlm activity for multiply nodes.",
+                                 snapshots, "Snapshot Stats for Mulitple Nodes", path_to_output_dir,
+                                 options)
         # Can still take snapshots as i can sort in plugin by hostname into a map.
 
     def analyze(self):

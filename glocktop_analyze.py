@@ -70,7 +70,7 @@ VERSION_NUMBER = "0.1-7"
 # #####################################################################
 # Global functions
 # #####################################################################
-def __output_warnings(warnings, disable_std_out=True, html_format=False):
+def __output_warnings(warnings, path_to_output_dir, disable_std_out=True, html_format=False):
     if (warnings):
         if (not disable_std_out):
             warnings_str = ""
@@ -150,7 +150,7 @@ def __analyze_file(path_to_output_file, gfs2_filesystem_names, show_ended_proces
 # ##############################################################################
 def __get_plugins(snapshots, path_to_output_dir, options, is_multi_node_supported=False):
     if (is_multi_node_supported):
-        return [Snapshots(snapshots, path_to_output_dir, options)]
+        return [SnapshotsMultinode(snapshots, path_to_output_dir, options)]
     else:
         return [GlocksActivity(snapshots, path_to_output_dir, options),
                 GSStats(snapshots, path_to_output_dir, options),
@@ -161,22 +161,19 @@ def __get_plugins(snapshots, path_to_output_dir, options, is_multi_node_supporte
                 Pids(snapshots, path_to_output_dir, options),
                 GlocksDependencies(snapshots, path_to_output_dir, options)]
 
-def __plugins_run(snapshots_by_filesystem, path_to_output_dir,
+def __plugins_run(snapshots, path_to_output_dir,
                   enable_html_format, enable_png_format, enable_graphs,
                   is_multi_node_supported=False):
     warnings = {}
-    # Loop over all the filesystems and plugins.
-    for filesystem_name in snapshots_by_filesystem.keys():
-        snapshots = snapshots_by_filesystem.get(filesystem_name)
-        plugins = __get_plugins(snapshots, path_to_output_dir, options, is_multi_node_supported)
-        for plugin in plugins:
-            plugin.analyze()
-            plugin.write(html_format=enable_html_format)
-            if (not cmdline_opts.disable_std_out):
-                plugin.console()
-            if (enable_graphs):
-                plugin.graph(enable_png_format)
-            warnings =  merge_dicts(warnings, plugin.get_warnings())
+    plugins = __get_plugins(snapshots, path_to_output_dir, options, is_multi_node_supported)
+    for plugin in plugins:
+        plugin.analyze()
+        plugin.write(html_format=enable_html_format)
+        if (not cmdline_opts.disable_std_out):
+            plugin.console()
+        if (enable_graphs):
+            plugin.graph(enable_png_format)
+        warnings =  merge_dicts(warnings, plugin.get_warnings())
     return warnings
 
 # ##############################################################################
@@ -447,12 +444,17 @@ if __name__ == "__main__":
             message ="The analyzing of the file is complete."
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
 
-            # All the warnings found on the filesystem after plugins have ran.
-            warnings = __plugins_run(snapshots_by_filesystem, path_to_output_dir,
-                                     enable_html_format, enable_png_format, enable_graphs)
-            __output_warnings(warnings,
-                              disable_std_out=cmdline_opts.disable_std_out,
-                              html_format=enable_html_format)
+            # Loop over all the filesystems and plugins and save the warnings.
+            for filesystem_name in snapshots_by_filesystem.keys():
+                snapshots = snapshots_by_filesystem.get(filesystem_name)
+                # All the warnings found on the filesystem after plugins have ran.
+                warnings = __plugins_run(snapshots, path_to_output_dir,
+                                         enable_html_format, enable_png_format,
+                                         enable_graphs)
+                #__output_warnings(warnings, path_to_output_dir,
+                #                  disable_std_out=cmdline_opts.disable_std_out,
+                #                  html_format=enable_html_format)
+
         # #######################################################################
         # Analyze the files as a group
         # #######################################################################
@@ -484,12 +486,41 @@ if __name__ == "__main__":
             if (filenames_for_hosts.keys()):
                 # output directory is multiple_node/<filesystem_name>
                 for filesystem in filesystems_on_hosts.keys():
-                    if (len(filesystems_on_hosts.get(filesystem)) > 1):
-                        hostname_str = ""
-                        for hostname in filesystems_on_hosts.get(filesystem):
-                            hostname_str += "%s " %(hostname)
-                            print "%s: %s" %(filesystem, hostname_str.strip())
-
+                    snapshots_by_filesystem = []
+                    warnings = {}
+                    for chostname in filesystems_on_hosts.get(filesystem):
+                        fs_host_key = "%s-%s" %(chostname, filesystem)
+                        path_to_filename = filenames_for_hosts.get(fs_host_key)
+                        if (not cmdline_opts.gfs2_filesystem_names or filesystem in cmdline_opts.gfs2_filesystem_names):
+                            message = "The file will be analyzed for filesystem \"%s\" for " %(filesystem)
+                            message += "host \"%s\": %s" %(chostname, path_to_filename)
+                            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+                            current_snapshots = []
+                            try:
+                                current_snapshots = __analyze_file(path_to_filename,
+                                                                   [filesystem],
+                                                                   cmdline_opts.show_ended_process_and_tlocks).get(filesystem)
+                                message =  "The analyzing of the file is complete."
+                                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+                            except AttributeError:
+                                message = "There was no data found for the filesystem: %s" %(filesystem)
+                                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+                                continue
+                            if (current_snapshots):
+                                snapshots_by_filesystem += current_snapshots
+                    print "%s: %d" %(filesystem, len(snapshots_by_filesystem))
+                    if (snapshots_by_filesystem):
+                        path_to_output_dir = os.path.join(os.path.join(cmdline_opts.path_to_output_dir,
+                                                                       "multiple_nodes"),
+                                                          "%s" %(filesystem))
+                        # All the warnings found on the filesystem after plugins have ran.
+                        warnings = __plugins_run(snapshots_by_filesystem,
+                                                 path_to_output_dir,
+                                                 enable_html_format, enable_png_format,
+                                                 enable_graphs, is_multi_node_supported=True)
+                        #warnings = merge_dicts(warnings, __output_warnings(warnings, path_to_output_dir,
+                        #                                        disable_std_out=cmdline_opts.disable_std_out,
+                        #                                        html_format=enable_html_format)
     except KeyboardInterrupt:
         print ""
         message =  "This script will exit since control-c was executed by end user."
