@@ -27,13 +27,58 @@ class SnapshotsMultinode(PluginMultinode):
                                  "The stats for the snapshots and dlm activity for multiply nodes.",
                                  snapshots, "Snapshot Stats for Mulitple Nodes", path_to_output_dir,
                                  options)
-        # Can still take snapshots as i can sort in plugin by hostname into a map.
+
+        self.__start_time_for_hosts = {}
+        self.__stop_time_for_hosts = {}
+        self.__snapshot_count_for_hosts = {}
+        self.__dlm_activity_for_hosts = {}
 
     def analyze(self):
-        print "Analyzing multinodes for snapshots."
+        for hostname in self.get_hostnames():
+            date_time = self.get_snapshots_start_time(hostname)
+            if (not date_time == None):
+                self.__start_time_for_hosts[hostname] = date_time
+            date_time = self.get_snapshots_end_time(hostname)
+            if (not date_time == None):
+                self.__stop_time_for_hosts[hostname] = date_time
+            for snapshot in self.get_snapshots(hostname):
+                if (not self.__snapshot_count_for_hosts.has_key(hostname)):
+                    self.__snapshot_count_for_hosts[hostname] = 0
+                self.__snapshot_count_for_hosts[hostname] += 1
+            dlm_activity = snapshot.get_dlm_activity()
+            if (not dlm_activity == None):
+                if (not self.__dlm_activity_for_hosts.has_key(hostname)):
+                    self.__dlm_activity_for_hosts[hostname] = []
+                    dlm_activity_data = [self.get_filesystem_name(),
+                                         snapshot.get_date_time(),
+                                         dlm_activity.get_waiter_count()]
+                    self.__dlm_activity_for_hosts[hostname].append(dlm_activity_data)
 
     def console(self):
-        print "Multiply nodes for Snapshots."
+        summary = ""
+        snapshots_table = []
+        dlm_activity_table = []
+        for hostname in self.get_hostnames():
+            if (self.get_snapshots(hostname)):
+                snapshots_table.append([hostname, self.get_filesystem_name(),
+                                        str(self.__snapshot_count_for_hosts.get(hostname)),
+                                        str(self.__start_time_for_hosts.get(hostname)),
+                                        str(self.__stop_time_for_hosts.get(hostname))])
+
+            if (self.__dlm_activity_for_hosts.has_key(hostname)):
+                dlm_activity_table.append(self.__dlm_activity_for_hosts.get(hostname))
+
+        if (snapshots_table):
+            summary += "%s\n\n" %(tableize(snapshots_table, ["Hostname", "Filesystem",
+                                                             "Snapshots", "Start Time",
+                                                             "Stop Time"]).strip())
+        if (dlm_activity_table):
+            summary += "%s\n\n" %(tableize(dlm_activity_table, ["Hostname", "Filesystem",
+                                                                "Snapshot Time",
+                                                                "Number of DLM Waiters"]).strip())
+        if (summary):
+            print "%s: %s\n%s\n" %(self.get_title(), self.get_description(), summary.strip())
+        return summary
 
     def write(self, html_format=False):
         pass

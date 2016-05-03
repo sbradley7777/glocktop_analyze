@@ -27,45 +27,44 @@ class Snapshots(Plugin):
                         "The stats for the snapshots and dlm activity.",
                         snapshots, "Snapshot Stats", path_to_output_dir,
                         options)
-        self.__count = 0
-        self.__start_time = None
-        self.__stop_time = None
-
+        self.__start_time = self.get_snapshots_start_time()
+        self.__stop_time = self.get_snapshots_end_time()
+        self.__snapshot_count = 0
         self.__dlm_activity = []
 
     def analyze(self):
         for snapshot in self.get_snapshots():
-            if (self.__start_time == None):
-                self.__start_time = str(snapshot.get_date_time())
-            self.__count += 1
-            self.__stop_time = str(snapshot.get_date_time())
+            self.__snapshot_count += 1
             dlm_activity = snapshot.get_dlm_activity()
             if (not dlm_activity == None):
-                self.__dlm_activity.append([self.get_filesystem_name(), snapshot.get_date_time(), dlm_activity.get_waiter_count()])
+                self.__dlm_activity.append([self.get_hostname(), self.get_filesystem_name(), snapshot.get_date_time(), dlm_activity.get_waiter_count()])
 
     def console(self):
         summary = ""
         if (self.get_snapshots()):
-            summary += "%s\n\n" %(tableize([[self.get_filesystem_name(), str(self.__count),
-                                             self.__start_time, self.__stop_time]],
-                                           ["Filesystem", "Snapshots", "Start Time", "Stop Time"]).strip())
+            summary += "%s\n\n" %(tableize([[self.get_hostname(), self.get_filesystem_name(),
+                                             str(self.__snapshot_count), self.__start_time, self.__stop_time]],
+                                           ["Hostname", "Filesystem", "Snapshots", "Start Time", "Stop Time"]).strip())
         if (self.__dlm_activity):
-            summary += "%s\n\n" %(tableize(self.__dlm_activity, ["Filesystem", "Snapshot Time",
+            summary += "%s\n\n" %(tableize(self.__dlm_activity, ["Hostname", "Filesystem",
+                                                                 "Snapshot Time",
                                                                  "Number of DLM Waiters"]).strip())
+
         if (summary):
             print "%s: %s\n%s\n" %(self.get_title(), self.get_description(), summary.strip())
 
     def write(self, html_format=False):
         if (not html_format):
             wdata = ""
-            if (self.__count > 0):
-                wdata += "%s\n\n" %(tableize([[self.get_filesystem_name(), str(self.__count),
-                                               self.__start_time, self.__stop_time]],
-                                             ["Filesystem", "Snapshots",
+            if (self.__snapshot_count > 0):
+                wdata += "%s\n\n" %(tableize([[self.get_hostname(), self.get_filesystem_name(),
+                                               str(self.__snapshot_count), self.__start_time,
+                                               self.__stop_time]],
+                                             ["Hostname", "Filesystem", "Snapshots",
                                               "Start Time", "Stop Time"], colorize=False).strip())
             if (self.__dlm_activity):
                 wdata += "%s\n\n" %(tableize(self.__dlm_activity,
-                                             ["Filesystem", "Snapshot Time", "Number of DLM Waiters"],
+                                             ["Hostname", "Filesystem", "Snapshot Time", "Number of DLM Waiters"],
                                              colorize=False).strip())
             if (wdata):
                 wdata = "%s: %s\n%s\n" %(self.get_title(), self.get_description(), wdata.strip())
@@ -76,16 +75,16 @@ class Snapshots(Plugin):
                     message = "An error occurred writing to the file: %s" %(path_to_output_file)
         else:
             bdata = ""
-            if (self.__count > 0):
-                bdata += generate_table([[self.get_filesystem_name(), str(self.__count),
+            if (self.__snapshot_count > 0):
+                bdata += generate_table([[self.get_hostname(), self.get_filesystem_name(), str(self.__snapshot_count),
                                           self.__start_time, self.__stop_time]],
-                                        ["Filesystem", "Snapshots", "Start Time", "Stop Time"],
+                                        ["Hostname", "Filesystem", "Snapshots", "Start Time", "Stop Time"],
                                         title="Snapshots Taken",
                                         description="The number of snapshots taken and the time that first and the last snapshot taken.")
 
             if (self.__dlm_activity):
                 bdata += generate_table(self.__dlm_activity,
-                                        ["Filesystem", "Snapshot Time", "Number of DLM Waiters"],
+                                        ["Hostname", "Filesystem", "Snapshot Time", "Number of DLM Waiters"],
                                         title="DLM Waiter Count",
                                         description="The number of DLM waiters for a snapshot. Only snapshots with DLM waiter count higher than 0 displayed.")
             if (bdata):

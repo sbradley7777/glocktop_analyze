@@ -508,7 +508,6 @@ if __name__ == "__main__":
                                 continue
                             if (current_snapshots):
                                 snapshots_by_filesystem += current_snapshots
-                    print "%s: %d" %(filesystem, len(snapshots_by_filesystem))
                     if (snapshots_by_filesystem):
                         path_to_output_dir = os.path.join(os.path.join(cmdline_opts.path_to_output_dir,
                                                                        "multiple_nodes"),

@@ -33,7 +33,7 @@ class Plugin(object):
 
         self.__options = {}
         self.__multiply_node_enabled = multiply_node_enabled
-        self.__snapshots_start_time, self.__snapshots_end_time = self.__get_snapshots_times()
+        self.__snapshots_start_time, self.__snapshots_end_time = self.get_snapshots_times(self.__snapshots)
 
 
         if hasattr(self, "OPTIONS"):
@@ -61,13 +61,18 @@ class Plugin(object):
                 except IndexError:
                     pass
 
-    def __get_snapshots_times(self):
+    def get_snapshots_times(self, snapshots):
         snapshots_start_time = None
         snapshots_end_time = None
-        for snapshot in self.get_snapshots():
+        for snapshot in snapshots:
             if (snapshots_start_time == None):
                 snapshots_start_time = snapshot.get_date_time()
-            snapshots_end_time = snapshot.get_date_time()
+            elif (snapshots_start_time > snapshot.get_date_time()):
+                snapshots_start_time = snapshot.get_date_time()
+            if (snapshots_end_time == None):
+                snapshots_end_time = snapshot.get_date_time()
+            elif (snapshots_end_time < snapshot.get_date_time()):
+                snapshots_end_time = snapshot.get_date_time()
         return snapshots_start_time, snapshots_end_time
 
     def get_name(self):
@@ -90,11 +95,6 @@ class Plugin(object):
             return self.__options.get(option_name)
         return ""
 
-    def get_hostname(self):
-        if (self.__snapshots):
-            return self.__snapshots[0].get_hostname()
-        return ""
-
     def get_filesystem_name(self):
         if (self.__snapshots):
             return self.__snapshots[0].get_filesystem_name()
@@ -103,22 +103,34 @@ class Plugin(object):
     def is_multiply_node_enabled(self):
         return self.__multiply_node_enabled
 
+    def get_hostname(self):
+        """
+        If multinode is enabled then None is returned since multinode could have
+        multiple hostnames.
+        """
+        if ((not self.__snapshots) or (self.is_multiply_node_enabled())):
+            return ""
+        return self.__snapshots[0].get_hostname()
+
+    def get_snapshots_start_time(self):
+        """
+        If multinode is enabled oldest time is returned from all the nodes.
+        """
+        return self.__snapshots_start_time
+
+    def get_snapshots_end_time(self):
+        """
+        If multinode is enabled newest time is returned from all the nodes.
+        """
+        return self.__snapshots_end_time
+
+    def get_warnings(self):
+        return self.__warnings
+
     def add_warning(self, wtype, description):
         if (not self.__warnings.has_key(wtype)):
             self.__warnings[wtype] = []
         self.__warnings[wtype].append(description)
-
-    def get_snapshots_start_time(self):
-        return self.__snapshots_start_time
-
-    def get_snapshots_end_time(self):
-        return self.__snapshots_end_time
-
-    def analyze(self):
-        pass
-
-    def get_warnings(self):
-        return self.__warnings
 
     def console(self):
         pass
@@ -129,9 +141,67 @@ class Plugin(object):
     def graph(self, png_format=False):
         pass
 
+    def analyze(self):
+        pass
+
+
 class PluginMultinode(Plugin):
     def __init__(self, name, description, snapshots, title, path_to_output_dir, options):
         Plugin.__init__(self, name, description, snapshots, title, path_to_output_dir, options, multiply_node_enabled=True)
+
+        # Sort all the snapshots into bins for each host they captured on.
+        self.__snapshots_by_host = {}
+        for snapshot in self.get_snapshots():
+            hostname = snapshot.get_hostname()
+            if (not self.__snapshots_by_host.has_key(hostname)):
+                self.__snapshots_by_host[hostname] = []
+            self.__snapshots_by_host[hostname].append(snapshot)
+
+    def get_hostnames(self):
+        return self.__snapshots_by_host.keys()
+
+    def get_snapshots_start_time(self, hostname=""):
+        """
+        If no hostname is given then oldest snapshot of all the host is
+        returned. If hostname is given then oldest snapshot for that hostname
+        is given.
+
+        """
+        if (not hostname):
+            return Plugin.get_snapshots_start_time(self)
+        snapshots_start_time = None
+        if (self.__snapshots_by_host.has_key(hostname)):
+            snapshots = self.__snapshots_by_host.get(hostname)
+            snapshots_start_time, snapshots_end_time = self.get_snapshots_times(snapshots)
+        return snapshots_start_time
+
+    def get_snapshots_end_time(self, hostname=""):
+        """
+        If no hostname is given then newest snapshot of all the host is
+        returned. If hostname is given then newest snapshot for that hostname
+        is given.
+
+        """
+        if (not hostname):
+            return Plugin.get_snapshots_end_time(self)
+        snapshots_end_time = None
+        if (self.__snapshots_by_host.has_key(hostname)):
+            snapshots = self.__snapshots_by_host.get(hostname)
+            snapshots_start_time, snapshots_end_time = self.get_snapshots_times(snapshots)
+        return snapshots_end_time
+
+    def get_snapshots(self, hostname=""):
+        """
+        If no hostname is given then all the snapshots for all host is return. If
+        hostname is given then the snapshots for that host are returned.
+        """
+        if (not hostname):
+            return Plugin.get_snapshots(self)
+        if (self.__snapshots_by_host.has_key(hostname)):
+            return self.__snapshots_by_host.get(hostname)
+        return []
+
+
 
 # #######################################################################
 # Functions
