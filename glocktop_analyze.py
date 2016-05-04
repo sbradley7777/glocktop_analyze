@@ -163,24 +163,49 @@ def __get_plugins(snapshots, path_to_output_dir, options, is_multi_node_supporte
 
 def __plugins_run(snapshots, path_to_output_dir,
                   enable_html_format, enable_png_format, enable_graphs,
-                  is_multi_node_supported=False):
+                  plugins_only_to_enable, is_multi_node_supported=False):
     warnings = {}
     plugins = __get_plugins(snapshots, path_to_output_dir, options, is_multi_node_supported)
     for plugin in plugins:
-        plugin.analyze()
-        plugin.write(html_format=enable_html_format)
-        if (not cmdline_opts.disable_std_out):
-            plugin.console()
-        if (enable_graphs):
-            plugin.graph(enable_png_format)
-        warnings =  merge_dicts(warnings, plugin.get_warnings())
+        if ((not plugins_only_to_enable) or (plugin.get_name() in plugins_only_to_enable)):
+            plugin.analyze()
+            plugin.write(html_format=enable_html_format)
+            if (not cmdline_opts.disable_std_out):
+                plugin.console()
+            if (enable_graphs):
+                plugin.graph(enable_png_format)
+            warnings =  merge_dicts(warnings, plugin.get_warnings())
     return warnings
+
+def __print_plugins_description():
+    plugins = __get_plugins([], "", {})
+    plugins += __get_plugins([], "", {}, True)
+    plugins_str = ""
+    for plugin in plugins:
+        plugins_str += "  %s: %s\n" %(ColorizeConsoleText.red(plugin.get_name()), plugin.get_description())
+    if (plugins_str):
+        print "The plugins installed are:"
+        print plugins_str.rstrip()
+    else:
+        message = "There was no plugins found."
+        logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
+        sys.exit()
+    options_str = ""
+    for plugin in plugins:
+        if (hasattr(plugin, "OPTIONS")):
+            for option in plugin.OPTIONS:
+                option_name = "  %s.%s" %(plugin.get_name(), option[0])
+                options_str += "%s: %s (Default=%d)\n" %(ColorizeConsoleText.red(option_name), option[1], option[2])
+    if (options_str):
+        print "\nThe plugin options that can be configured are:"
+        print options_str.rstrip()
 
 # ##############################################################################
 # Get user selected options and plugin options
 # ##############################################################################
 def __get_plugin_options(user_options):
-    plugins = __get_plugins([], "", {})
+    plugins =  __get_plugins([], "", {})
+    plugins += __get_plugins([], "", {}, True)
     options = {}
     for option in user_options:
         option_split = option.rsplit("=", 1)
@@ -216,6 +241,11 @@ def __get_cmdline_options(cmd_parser) :
                           dest="disable_std_out",
                           help="disables logging to console",
                           default=False)
+    cmd_parser.add_option("-l", "--show_plugins_list",
+                          action="store_true",
+                          dest="show_plugins_list",
+                          help="show all available plugins and plugin options",
+                          default=False)
     cmd_parser.add_option("-p", "--path_to_filename",
                           action="extend",
                           dest="path_to_src_file",
@@ -237,6 +267,20 @@ def __get_cmdline_options(cmd_parser) :
                           type="string",
                           metavar="<gfs2 filesystem name>",
                           default=[])
+    cmd_parser.add_option("-e", "--enable_only",
+                          action="extend",
+                          dest="plugins_only_to_enable",
+                          help="plugins to only enable and run against the data",
+                          type="string",
+                          metavar="<plugin name>",
+                          default=[])
+    cmd_parser.add_option("-k", "--plugins_option",
+                          action="extend",
+                          dest="plugins_options",
+                          help="a plugins option and value.",
+                          type="string",
+                          metavar="<option_name=value>",
+                          default=[])
     cmd_parser.add_option("-A", "--disable_group_analysis",
                           action="store_false",
                           dest="enable_group_analysis",
@@ -247,18 +291,6 @@ def __get_cmdline_options(cmd_parser) :
                           dest="show_ended_process_and_tlocks",
                           help="show all glocks for ended process and transaction locks",
                           default=False)
-    cmd_parser.add_option("-l", "--show_plugins_list",
-                          action="store_true",
-                          dest="show_plugins_list",
-                          help="show all available plugins and plugin options",
-                          default=False)
-    cmd_parser.add_option("-k", "--plugins_option",
-                          action="extend",
-                          dest="plugins_options",
-                          help="a plugins option and value.",
-                          type="string",
-                          metavar="<option_name=value>",
-                          default=[])
     cmd_parser.add_option("-T", "--disable_html_format",
                           action="store_false",
                           dest="enable_html_format",
@@ -354,27 +386,7 @@ if __name__ == "__main__":
         # List all the plugins found and their corresponding options.
         if (cmdline_opts.show_plugins_list):
             cmd_parser.print_version()
-            plugins = __get_plugins([], "", {})
-
-            plugins_str = ""
-            for plugin in plugins:
-                plugins_str += "  %s: %s\n" %(ColorizeConsoleText.red(plugin.get_name()), plugin.get_description())
-            if (plugins_str):
-                print "The plugins installed are:"
-                print plugins_str.rstrip()
-            else:
-                message = "There was no plugins found."
-                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
-                sys.exit()
-            options_str = ""
-            for plugin in plugins:
-                if (hasattr(plugin, "OPTIONS")):
-                    for option in plugin.OPTIONS:
-                        option_name = "  %s.%s" %(plugin.get_name(), option[0])
-                        options_str += "%s: %s (Default=%d)\n" %(ColorizeConsoleText.red(option_name), option[1], option[2])
-            if (options_str):
-                print "\nThe plugin options that can be configured are:"
-                print options_str.rstrip()
+            __print_plugins_description()
             sys.exit()
 
         # #######################################################################
@@ -450,7 +462,8 @@ if __name__ == "__main__":
                 # All the warnings found on the filesystem after plugins have ran.
                 warnings = __plugins_run(snapshots, path_to_output_dir,
                                          enable_html_format, enable_png_format,
-                                         enable_graphs)
+                                         enable_graphs,
+                                         cmdline_opts.plugins_only_to_enable)
                 #__output_warnings(warnings, path_to_output_dir,
                 #                  disable_std_out=cmdline_opts.disable_std_out,
                 #                  html_format=enable_html_format)
@@ -516,7 +529,9 @@ if __name__ == "__main__":
                         warnings = __plugins_run(snapshots_by_filesystem,
                                                  path_to_output_dir,
                                                  enable_html_format, enable_png_format,
-                                                 enable_graphs, is_multi_node_supported=True)
+                                                 enable_graphs,
+                                                 cmdline_opts.plugins_only_to_enable,
+                                                 is_multi_node_supported=True)
                         #warnings = merge_dicts(warnings, __output_warnings(warnings, path_to_output_dir,
                         #                                        disable_std_out=cmdline_opts.disable_std_out,
                         #                                        html_format=enable_html_format)
