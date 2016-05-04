@@ -54,6 +54,8 @@ class Snapshots(Plugin):
             print "%s: %s\n%s\n" %(self.get_title(), self.get_description(), summary.strip())
 
     def write(self, html_format=False):
+        wdata =""
+        path_to_output_file = ""
         if (not html_format):
             wdata = ""
             if (self.__snapshot_count > 0):
@@ -71,8 +73,6 @@ class Snapshots(Plugin):
                 filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                                 self.get_filesystem_name()), filename)
-                if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
-                    message = "An error occurred writing to the file: %s" %(path_to_output_file)
         else:
             bdata = ""
             if (self.__snapshot_count > 0):
@@ -92,5 +92,7 @@ class Snapshots(Plugin):
                 filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                             self.get_filesystem_name()), filename)
-                if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
-                    message = "An error occurred writing to the file: %s" %(path_to_output_file)
+        if (wdata):
+            if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
+                message = "An error occurred writing to the file: %s" %(path_to_output_file)
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)

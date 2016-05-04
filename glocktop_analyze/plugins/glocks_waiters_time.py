@@ -14,7 +14,6 @@ Options for plugin:
 import logging
 import logging.handlers
 import os.path
-from operator import itemgetter
 from collections import OrderedDict
 
 import glocktop_analyze

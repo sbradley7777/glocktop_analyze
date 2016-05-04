@@ -12,7 +12,6 @@ Options for the plugin:
 import logging
 import logging.handlers
 import os.path
-from operator import itemgetter
 
 import glocktop_analyze
 from glocktop_analyze.plugins import Plugin
