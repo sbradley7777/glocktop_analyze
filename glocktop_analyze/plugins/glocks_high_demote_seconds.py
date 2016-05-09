@@ -73,7 +73,7 @@ class GlocksHighDemoteSeconds(Plugin):
     def console(self):
         if (self.__table):
             print "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
-                                   tableize(self.__table,["Filesystem", "Snapshots",
+                                   tableize(self.__table,["Filesystem", "Glock",
                                                           "Demote Seconds"]).strip())
 
 
@@ -86,7 +86,7 @@ class GlocksHighDemoteSeconds(Plugin):
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                                 self.get_filesystem_name()), filename)
                 wdata = "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
-                                         tableize(self.__table,["Filesystem", "Snapshots",
+                                         tableize(self.__table,["Filesystem", "Glock",
                                                                 "Demote Seconds"], colorize=False))
 
             else:
@@ -94,7 +94,7 @@ class GlocksHighDemoteSeconds(Plugin):
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                                 self.get_filesystem_name()), filename)
                 bdata = generate_table(self.__table,
-                                       ["Filesystem", "Snapshots", "Demote Seconds"],
+                                       ["Filesystem", "Glock", "Demote Seconds"],
                                        title=self.get_title(),
                                        description="Glocks that took longer than 0 seconds to demote a glock")
                 wdata = "%s\n%s\n%s" %(generate_table_header(), bdata, generate_footer())

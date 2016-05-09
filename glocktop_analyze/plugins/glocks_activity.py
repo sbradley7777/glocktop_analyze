@@ -52,8 +52,10 @@ class GlocksActivity(Plugin):
                 if (colorize):
                     current_summary_title = ColorizeConsoleText.red(str(snapshot))
                 summary += "%s\n%s\n" %(current_summary_title, current_summary)
-        return "%s: %s\n%s" %(self.get_title(), self.get_description(),
-                              summary.rstrip("----------------"))
+        if (summary):
+            return "%s: %s\n%s" %(self.get_title(), self.get_description(),
+                                  summary.rstrip("----------------"))
+        return ""
 
     def __get_html(self, colorize=False):
         summary = ""
@@ -74,10 +76,12 @@ class GlocksActivity(Plugin):
                 if (colorize):
                     current_summary_title = "<b><span class=\"red\">%s</span></b>" %(str(snapshot))
                 summary += "%s<BR/>%s" %(current_summary_title, current_summary)
-        header =  "<center><H3>Glock Activity between "
-        header += "%s and %s </H3></center>" %(self.get_snapshots_start_time().strftime("%Y-%m-%d %H:%M:%S"),
-                                               self.get_snapshots_end_time().strftime("%Y-%m-%d %H:%M:%S"))
-        return header + summary
+        if (summary):
+            header =  "<center><H3>Glock Activity between "
+            header += "%s and %s </H3></center>" %(self.get_snapshots_start_time().strftime("%Y-%m-%d %H:%M:%S"),
+                                                   self.get_snapshots_end_time().strftime("%Y-%m-%d %H:%M:%S"))
+            return header + summary
+        return ""
 
     def console(self):
         summary = self.__get_text(colorize=True)
@@ -94,12 +98,13 @@ class GlocksActivity(Plugin):
                                                             self.get_filesystem_name()), filename)
 
         else:
-            bdata = self.__get_html(colorize=True)
-            wdata = "%s\n%s\n<BR/><HR/><BR/>%s" %(generate_css_header(), bdata, generate_footer())
-
             filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
             path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                             self.get_filesystem_name()), filename)
+            bdata = self.__get_html(colorize=True)
+            if (bdata):
+                wdata = "%s\n%s\n<BR/><HR/><BR/>%s" %(generate_css_header(), bdata, generate_footer())
+
 
         if (wdata):
             if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):

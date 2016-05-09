@@ -191,31 +191,7 @@ class GlocksDependencies(Plugin):
                     snapshot_header = "%s - %s @%s" %(pidglocks_in_snapshot.get_filesystem_name(),
                                                              pidglocks_in_snapshot.get_date_time(),
                                                              pidglocks_in_snapshot.get_hostname())
-                summary += "<b><span class=\"red\">%s</span></b><BR/>%s" %(snapshot_header, snapshot_summary.strip())
-        """
-        for snapshot in self.get_snapshots():
-            current_summary = ""
-            glocks = snapshot.get_glocks()
-            for glock in glocks:
-                glock_holders = glock.get_holders()
-                if (len(glock_holders) >= self.__mininum_waiter_count):
-                    current_summary += "  %s<BR/>" %(glock)
-                    for holder in glock_holders:
-                        current_summary += "&nbsp;&nbsp;&nbsp;&nbsp; %s<BR/>" %(holder)
-                    if (not glock.get_glock_object() == None):
-                        current_summary += "&nbsp;&nbsp;&nbsp;&nbsp; %s<BR/>" %(glock.get_glock_object())
-                    current_summary += "<BR/>"
-            if (current_summary):
-                current_summary_title = str(snapshot)
-                if (colorize):
-                    current_summary_title = "<b>%s</b>" %(str(snapshot))
-                summary += "%s<BR/>%s" %(current_summary_title, current_summary)
-        header =  "<center><H3>Glock Activity between "
-        header += "%s and %s </H3></center>" %(self.get_snapshots_start_time().strftime("%Y-%m-%d %H:%M:%S"),
-                                               self.get_snapshots_end_time().strftime("%Y-%m-%d %H:%M:%S"))
-        return header + summary
-        """
-
+                    summary += "<b><span class=\"red\">%s</span></b><BR/>%s" %(snapshot_header, snapshot_summary.strip())
         if (summary):
             header =  "<center><H3>Glocks Dependencies between "
             header += "%s and %s </H3></center>" %(self.get_snapshots_start_time().strftime("%Y-%m-%d %H:%M:%S"),

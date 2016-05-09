@@ -33,6 +33,48 @@ class SnapshotsMultinode(PluginMultinode):
         self.__snapshot_count_for_hosts = {}
         self.__dlm_activity_for_hosts = {}
 
+    def __get_text(self, colorize=False):
+        summary = ""
+        snapshots_table = []
+        dlm_activity_table = []
+        for hostname in self.get_hostnames():
+            if (self.get_snapshots(hostname)):
+                snapshots_table.append([hostname, self.get_filesystem_name(),
+                                        str(self.__snapshot_count_for_hosts.get(hostname)),
+                                        str(self.__start_time_for_hosts.get(hostname)),
+                                        str(self.__stop_time_for_hosts.get(hostname))])
+
+            if (self.__dlm_activity_for_hosts.has_key(hostname)):
+                dlm_activity_table.append(self.__dlm_activity_for_hosts.get(hostname))
+
+        if (snapshots_table):
+            summary += "Snapshots Taken Start and Stop Time\n"
+            summary += "%s\n\n" %(tableize(snapshots_table, ["Hostname", "Filesystem",
+                                                             "Snapshots", "Start Time",
+                                                             "Stop Time"], colorize).strip())
+        if (dlm_activity_table):
+            summary += "Snapshots with DLM Activity\n"
+            summary += "%s\n\n" %(tableize(dlm_activity_table, ["Hostname", "Filesystem",
+                                                                "Snapshot Time",
+                                                                "Number of DLM Waiters"], colorize).strip())
+        # Group the snapshots together based on time snapshot taken.
+        grouped_snapshots = self.get_snapshots_by_group()
+        group_count_sorted = grouped_snapshots.keys()
+        group_count_sorted.sort()
+        snapshots_table_by_group = ""
+        for group_count in group_count_sorted:
+            gsnapshots = grouped_snapshots.get(group_count)
+            gtable = []
+            for gsnapshot in gsnapshots:
+                gtable.append([gsnapshot.get_hostname(),
+                               gsnapshot.get_filesystem_name(),
+                               gsnapshot.get_date_time()])
+            snapshots_table_by_group  +=  "%s\n\n" %(tableize(gtable, ["Hostname", "Filesystem",
+                                                                       "Snapshot Time"], colorize)).strip()
+        if (snapshots_table_by_group):
+            summary += "Snapshots Grouped by Time Taken\n%s" %(snapshots_table_by_group)
+        return summary
+
     def analyze(self):
         for hostname in self.get_hostnames():
             date_time = self.get_snapshots_start_time(hostname)
@@ -55,96 +97,25 @@ class SnapshotsMultinode(PluginMultinode):
                     self.__dlm_activity_for_hosts[hostname].append(dlm_activity_data)
 
     def console(self):
-        summary = ""
-        snapshots_table = []
-        dlm_activity_table = []
-        for hostname in self.get_hostnames():
-            if (self.get_snapshots(hostname)):
-                snapshots_table.append([hostname, self.get_filesystem_name(),
-                                        str(self.__snapshot_count_for_hosts.get(hostname)),
-                                        str(self.__start_time_for_hosts.get(hostname)),
-                                        str(self.__stop_time_for_hosts.get(hostname))])
-
-            if (self.__dlm_activity_for_hosts.has_key(hostname)):
-                dlm_activity_table.append(self.__dlm_activity_for_hosts.get(hostname))
-
-        if (snapshots_table):
-            summary += "%s\n\n" %(tableize(snapshots_table, ["Hostname", "Filesystem",
-                                                             "Snapshots", "Start Time",
-                                                             "Stop Time"]).strip())
-        if (dlm_activity_table):
-            summary += "%s\n\n" %(tableize(dlm_activity_table, ["Hostname", "Filesystem",
-                                                                "Snapshot Time",
-                                                                "Number of DLM Waiters"]).strip())
-
-        sorted_snapshots_table = []
-        sorted_snapshots_by_date_time = sorted(self.get_snapshots(), key=lambda x: x.get_date_time(), reverse=False)
-        for snapshot in sorted_snapshots_by_date_time:
-            dlm_waiter_count = "-"
-            dlm_activity = snapshot.get_dlm_activity()
-            if (not dlm_activity == None):
-                dlm_waiter_count = "%d" %(dlm_activity.get_waiter_count())
-
-            sorted_snapshots_table.append([snapshot.get_hostname(),
-                                           snapshot.get_filesystem_name(),
-                                           snapshot.get_date_time(),
-                                           dlm_waiter_count])
-        if (sorted_snapshots_table):
-            summary += "%s\n\n" %(tableize(sorted_snapshots_table, ["Hostname", "Filesystem",
-                                                                    "Snapshot Time",
-                                                                    "DLM waiter count"]).strip())
-
+        summary = self.__get_text(colorize=True)
         if (summary):
             print "%s: %s\n%s\n" %(self.get_title(), self.get_description(), summary.strip())
 
+
     def write(self, html_format=False):
         wdata = ""
+        path_to_output_file = ""
         if (not html_format):
-            snapshots_table = []
-            dlm_activity_table = []
-            for hostname in self.get_hostnames():
-                if (self.get_snapshots(hostname)):
-                    snapshots_table.append([hostname, self.get_filesystem_name(),
-                                            str(self.__snapshot_count_for_hosts.get(hostname)),
-                                            str(self.__start_time_for_hosts.get(hostname)),
-                                            str(self.__stop_time_for_hosts.get(hostname))])
-
-                if (self.__dlm_activity_for_hosts.has_key(hostname)):
-                    dlm_activity_table.append(self.__dlm_activity_for_hosts.get(hostname))
-
-            if (snapshots_table):
-                wdata += "%s\n\n" %(tableize(snapshots_table, ["Hostname", "Filesystem",
-                                                                 "Snapshots", "Start Time",
-                                                                 "Stop Time"], colorize=False).strip())
-            if (dlm_activity_table):
-                wdata += "%s\n\n" %(tableize(dlm_activity_table, ["Hostname", "Filesystem",
-                                                                  "Snapshot Time",
-                                                                  "Number of DLM Waiters"], colorize=False).strip())
-
-            sorted_snapshots_table = []
-            sorted_snapshots_by_date_time = sorted(self.get_snapshots(), key=lambda x: x.get_date_time(), reverse=False)
-            for snapshot in sorted_snapshots_by_date_time:
-                dlm_waiter_count = "-"
-                dlm_activity = snapshot.get_dlm_activity()
-                if (not dlm_activity == None):
-                    dlm_waiter_count = "%d" %(dlm_activity.get_waiter_count())
-
-                sorted_snapshots_table.append([snapshot.get_hostname(),
-                                               snapshot.get_filesystem_name(),
-                                               snapshot.get_date_time(),
-                                               dlm_waiter_count])
-            if (sorted_snapshots_table):
-                wdata += "%s\n\n" %(tableize(sorted_snapshots_table, ["Hostname", "Filesystem",
-                                                                      "Snapshot Time",
-                                                                      "DLM waiter count"], colorize=False).strip())
-
-            if (wdata):
-                wdata = "%s: %s\n%s\n" %(self.get_title(), self.get_description(), wdata.strip())
+            summary = self.__get_text(colorize=False)
+            if (summary):
+                wdata = "%s: %s\n%s\n" %(self.get_title(), self.get_description(), summary.strip())
                 filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                                 self.get_filesystem_name()), filename)
         else:
             # write html output
             pass
-        if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
-            message = "An error occurred writing to the file: %s" %(path_to_output_file)
+        if (wdata):
+            if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
+                message = "An error occurred writing to the file: %s" %(path_to_output_file)
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
