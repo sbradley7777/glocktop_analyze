@@ -363,11 +363,13 @@ class OptionParserExtended(OptionParser):
         examples_message += "# %s -p /tmp/glocktop_files/ -o /var/www/html/glocktop_data \n\n" %(self.get_command_name())
         examples_message += "Analyze a single file and configure some of the plugins options.\n"
         examples_message += "# %s -p /tmp/glocktop_files/glocktop.node1 " %(self.get_command_name())
-        examples_message += "-k glocks_activity.mininum_waiter_count=7 -k glocks_in_snapshots.mininum_glocks_in_snapshots=11\n\n"
+        examples_message += "-k glocks_activity.mininum_waiter_count=7 -k glocks_in_snapshots.mininum_glocks_in_snapshots=11 \n\n"
         examples_message += "Analyze a single file and disable html format and show ended processes.\n"
-        examples_message += "# %s -p /tmp/glocktop_files/glocktop.node1 -E -I\n\n" %(self.get_command_name())
+        examples_message += "# %s -p /tmp/glocktop_files/glocktop.node1 -T -I \n\n" %(self.get_command_name())
         examples_message += "Analyze a particular filesystem only.\n"
         examples_message += "# %s -p /tmp/glocktop_files/glocktop.node1 -n mygfs2fs\n\n" %(self.get_command_name())
+        examples_message += "Analyze a single file and enable only a specific set of plugins and disable html format.\n"
+        examples_message += "# %s -p /tmp/glocktop_files/glocktop.node1  -e snapshots-multiply_nodes -e snapshots -T \n\n" %(self.get_command_name())
         print examples_message
 
 class ExtendOption (Option):
@@ -554,8 +556,7 @@ if __name__ == "__main__":
                                                                        "multiple_nodes"),
                                                           "%s" %(filesystem))
                         # All the warnings found on the filesystem after plugins have ran.
-                        snapshots_by_group = group_snapshots(snapshots_by_filesystem)
-                        warnings = __plugins_run(snapshots_by_group,
+                        warnings = __plugins_run(group_snapshots(snapshots_by_filesystem),
                                                  path_to_output_dir,
                                                  enable_html_format, enable_png_format,
                                                  enable_graphs,
