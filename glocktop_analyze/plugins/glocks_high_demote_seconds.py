@@ -24,7 +24,7 @@ class GlocksHighDemoteSeconds(Plugin):
                         snapshots, "Glocks with High Demote Seconds",
                         path_to_output_dir, options)
         self.__table = []
-
+        self.__glocks_high_demote_seconds = {}
 
     def __encode(self, glock_type, glock_inode):
         return "%s/%s" %(glock_type, glock_inode)
@@ -51,49 +51,55 @@ class GlocksHighDemoteSeconds(Plugin):
                 index += 1
         return table
 
+    def __get_text(self, colorize=False):
+        table = []
+        for hashkey in self.__glocks_high_demote_seconds.keys():
+            table += self.__tableify(hashkey, self.__glocks_high_demote_seconds.get(hashkey))
+        if (table):
+            return "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
+                                    tableize(table,["Filesystem", "Glock", "Demote Seconds"],
+                                             colorize=colorize).strip())
+
+        return ""
+
     def analyze(self):
-        glocks_high_demote_seconds = {}
+        self.__glocks_high_demote_seconds = {}
         for snapshot in self.get_snapshots():
             for glock in snapshot.get_glocks():
                 demote_time = int(glock.get_demote_time())
                 if (demote_time > 0):
                     hashkey = self.__encode(glock.get_type(), glock.get_inode())
-                    if (not glocks_high_demote_seconds.has_key(hashkey)):
-                        glocks_high_demote_seconds[hashkey] = ""
-                    demote_time_str = "%s %d" %(glocks_high_demote_seconds.get(hashkey),
+                    if (not self.__glocks_high_demote_seconds.has_key(hashkey)):
+                        self.__glocks_high_demote_seconds[hashkey] = ""
+                    demote_time_str = "%s %d" %(self.__glocks_high_demote_seconds.get(hashkey),
                                                 demote_time)
-                    glocks_high_demote_seconds[hashkey] = demote_time_str
-        self.__table = []
-        for hashkey in glocks_high_demote_seconds.keys():
-            self.__table += self.__tableify(hashkey, glocks_high_demote_seconds.get(hashkey))
-
-        if(self.__table):
+                    self.__glocks_high_demote_seconds[hashkey] = demote_time_str
+        if (self.__glocks_high_demote_seconds):
             self.add_warning("Glocks", "There were glocks found with a higher than zero time to demote a glock on filesystem: %s." %(self.get_filesystem_name()))
 
     def console(self):
-        if (self.__table):
-            print "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
-                                   tableize(self.__table,["Filesystem", "Glock",
-                                                          "Demote Seconds"]).strip())
+        summary = self.__get_text(colorize=True)
+        if (summary):
+            print summary
 
 
     def write(self, html_format=False):
-        if (self.__table):
+        if (self.__glocks_high_demote_seconds):
             wdata = ""
             path_to_output_file = ""
             if (not html_format):
                 filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                                 self.get_filesystem_name()), filename)
-                wdata = "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
-                                         tableize(self.__table,["Filesystem", "Glock",
-                                                                "Demote Seconds"], colorize=False))
-
+                wdata = self.__get_text(colorize=False)
             else:
                 filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                                 self.get_filesystem_name()), filename)
-                bdata = generate_table(self.__table,
+                table = []
+                for hashkey in self.__glocks_high_demote_seconds.keys():
+                    table += self.__tableify(hashkey, self.__glocks_high_demote_seconds.get(hashkey))
+                bdata = generate_table(table,
                                        ["Filesystem", "Glock", "Demote Seconds"],
                                        title=self.get_title(),
                                        description="Glocks that took longer than 0 seconds to demote a glock")
