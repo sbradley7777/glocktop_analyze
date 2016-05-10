@@ -247,7 +247,7 @@ class OptionParserExtended(OptionParser):
         examples_message = "\n\n"
         OptionParser.print_help(self)
 
-        examples_message += "Convert all the glocks files to the format used by glocktop_analyze.py."
+        examples_message += "Convert all the glocks files to the format used by glocktop_analyze.py.\n"
         examples_message += "# %s -p /tmp/gfs2_lockcapture-2015-06-30  -o /tmp/glocktop_data \n\n" %(self.get_command_name())
         print examples_message
 
