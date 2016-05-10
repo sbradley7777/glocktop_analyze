@@ -60,6 +60,7 @@ from glocktop_analyze.plugins.pids import Pids
 from glocktop_analyze.plugins.glocks_dependencies import GlocksDependencies
 
 # Plugins that can run on multiply nodes
+from glocktop_analyze import group_snapshots
 from glocktop_analyze.plugins.snapshots_multinode import SnapshotsMultiplyNodes
 
 # #####################################################################
@@ -188,7 +189,7 @@ def __plugins_run(snapshots, path_to_output_dir,
 
 def __print_plugins_description():
     plugins =  __get_plugins([], "", {}, [], False)
-    plugins += __get_plugins([], "", {}, [], True)
+    plugins += __get_plugins({}, "", {}, [], True)
     plugins_str = ""
     for plugin in plugins:
         plugins_str += "  %s: %s\n" %(ColorizeConsoleText.red(plugin.get_name()), plugin.get_description())
@@ -221,7 +222,7 @@ def __has_enabled_plugins(plugins_to_enable, is_multi_node_supported=False):
     else:
         plugins =  __get_plugins([], "", {}, [], False)
         if (is_multi_node_supported):
-            plugins = __get_plugins([], "", {}, [], True)
+            plugins = __get_plugins({}, "", {}, [], True)
         for plugin_name in plugins_to_enable:
              for plugin in plugins:
                  if (plugin_name.lower() == plugin.get_name().lower()):
@@ -230,7 +231,7 @@ def __has_enabled_plugins(plugins_to_enable, is_multi_node_supported=False):
 
 def __get_plugin_options(user_options):
     plugins =  __get_plugins([], "", {}, [], False)
-    plugins += __get_plugins([], "", {}, [], True)
+    plugins += __get_plugins({}, "", {}, [], True)
     options = {}
     for option in user_options:
         option_split = option.rsplit("=", 1)
@@ -553,7 +554,8 @@ if __name__ == "__main__":
                                                                        "multiple_nodes"),
                                                           "%s" %(filesystem))
                         # All the warnings found on the filesystem after plugins have ran.
-                        warnings = __plugins_run(snapshots_by_filesystem,
+                        snapshots_by_group = group_snapshots(snapshots_by_filesystem)
+                        warnings = __plugins_run(snapshots_by_group,
                                                  path_to_output_dir,
                                                  enable_html_format, enable_png_format,
                                                  enable_graphs,

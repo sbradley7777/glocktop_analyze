@@ -83,10 +83,12 @@ class SnapshotsMultiplyNodes(PluginMultinode):
             date_time = self.get_snapshots_end_time(hostname)
             if (not date_time == None):
                 self.__stop_time_for_hosts[hostname] = date_time
-            for snapshot in self.get_snapshots(hostname):
-                if (not self.__snapshot_count_for_hosts.has_key(hostname)):
-                    self.__snapshot_count_for_hosts[hostname] = 0
-                self.__snapshot_count_for_hosts[hostname] += 1
+
+        for snapshot in self.get_snapshots():
+            hostname = snapshot.get_hostname()
+            if (not self.__snapshot_count_for_hosts.has_key(hostname)):
+                self.__snapshot_count_for_hosts[hostname] = 0
+            self.__snapshot_count_for_hosts[hostname] += 1
             dlm_activity = snapshot.get_dlm_activity()
             if (not dlm_activity == None):
                 if (not self.__dlm_activity_for_hosts.has_key(hostname)):
@@ -100,7 +102,6 @@ class SnapshotsMultiplyNodes(PluginMultinode):
         summary = self.__get_text(colorize=True)
         if (summary):
             print "%s: %s\n%s\n" %(self.get_title(), self.get_description(), summary.strip())
-
 
     def write(self, html_format=False):
         wdata = ""

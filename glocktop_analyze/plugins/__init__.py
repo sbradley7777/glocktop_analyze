@@ -144,21 +144,18 @@ class Plugin(object):
     def analyze(self):
         pass
 
-
 class PluginMultinode(Plugin):
-    def __init__(self, name, description, snapshots, title, path_to_output_dir, options):
+    def __init__(self, name, description, grouped_snapshots, title, path_to_output_dir, options):
+        self.__grouped_snapshots = grouped_snapshots
+        # Create a list of all the snapshots for the parent plugin.
+        snapshots = []
+        sorted_keys = sorted(self.__grouped_snapshots.keys())
+        for key in sorted_keys:
+            snapshots += self.__grouped_snapshots.get(key)
         Plugin.__init__(self, name, description, snapshots, title, path_to_output_dir, options, multiply_node_enabled=True)
 
-        # Sort all the snapshots into bins for each host they captured on.
-        self.__snapshots_by_host = {}
-        for snapshot in self.get_snapshots():
-            hostname = snapshot.get_hostname()
-            if (not self.__snapshots_by_host.has_key(hostname)):
-                self.__snapshots_by_host[hostname] = []
-            self.__snapshots_by_host[hostname].append(snapshot)
-
     def get_hostnames(self):
-        return self.__snapshots_by_host.keys()
+        return self.__grouped_snapshots.keys()
 
     def get_snapshots_start_time(self, hostname=""):
         """
@@ -170,10 +167,11 @@ class PluginMultinode(Plugin):
         if (not hostname):
             return Plugin.get_snapshots_start_time(self)
         snapshots_start_time = None
-        if (self.__snapshots_by_host.has_key(hostname)):
-            snapshots = self.__snapshots_by_host.get(hostname)
-            snapshots_start_time, snapshots_end_time = self.get_snapshots_times(snapshots)
-        return snapshots_start_time
+        for snapshot in self.get_snapshots():
+            if (snapshot.get_hostname() == hostname):
+                snapshots_start_time, snapshots_end_time = self.get_snapshots_times(snapshots)
+                return snapshots_start_time
+        return None
 
     def get_snapshots_end_time(self, hostname=""):
         """
@@ -183,11 +181,11 @@ class PluginMultinode(Plugin):
 
         """
         if (not hostname):
-            return Plugin.get_snapshots_end_time(self)
+            return Plugin.get_snapshots_start_time(self)
         snapshots_end_time = None
-        if (self.__snapshots_by_host.has_key(hostname)):
-            snapshots = self.__snapshots_by_host.get(hostname)
-            snapshots_start_time, snapshots_end_time = self.get_snapshots_times(snapshots)
+        for snapshot in self.get_snapshots():
+            if (snapshot.get_hostname() == hostname):
+                snapshots_start_time, snapshots_end_time = self.get_snapshots_times(snapshots)
         return snapshots_end_time
 
     def get_snapshots(self, hostname=""):
@@ -195,50 +193,19 @@ class PluginMultinode(Plugin):
         If no hostname is given then all the snapshots for all host is return. If
         hostname is given then the snapshots for that host are returned.
         """
+        snapshots = []
         if (not hostname):
-            return Plugin.get_snapshots(self)
-        if (self.__snapshots_by_host.has_key(hostname)):
-            return self.__snapshots_by_host.get(hostname)
-        return []
+            snapshots = Plugin.get_snapshots(self)
+        else:
+            for snapshot in self.get_snapshots():
+                if (snapshot.get_hostname() == hostname):
+                    snapshots.append(snapshot)
+        return snapshots
 
-    def get_snapshots_by_group(self, max_time_difference=10):
+    def get_snapshots_by_group(self):
         # Returns map of snapshots grouped together. The key is the group count
         # and value is a list of snapshots that were taken around the same time.
-        sorted_snapshots = sorted(self.get_snapshots(), key=lambda x: x.get_date_time(), reverse=False)
-        def get_time_difference(dt1, dt2):
-            # dt1 is date_time that is newest and dt2 is the date_time that is oldest.
-            return int((dt1 -dt2).total_seconds())
-
-        if (sorted_snapshots):
-            group_index = 1
-            # Create the first group if there is a snapshot because no reason to
-            grouped_snapshots = {1:[]}
-            for snapshot in sorted_snapshots:
-                # Base time to compare snapshot times.
-                base_date_time = snapshot.get_date_time()
-                current_group = grouped_snapshots.get(group_index)
-                if (current_group):
-                    base_date_time = grouped_snapshots.get(group_index)[0].get_date_time()
-                # Check to see if a new group should be created or if we need to
-                # add to existing one.
-                create_new_group = False
-                for snapshot_in_group in grouped_snapshots.get(group_index):
-                    sg_hostname = snapshot_in_group.get_hostname()
-                    if (snapshot.get_hostname() == sg_hostname):
-                        # If a host already has snapshot in there then do not
-                        # add to current one.
-                        create_new_group = True
-                    elif (get_time_difference(snapshot.get_date_time(),
-                                              base_date_time) > max_time_difference):
-                        # If the difference in greater than max difference then
-                        # create a new group.
-                        create_new_group = True
-                if (create_new_group):
-                    group_index += 1
-                    grouped_snapshots[group_index] = [snapshot]
-                else:
-                    grouped_snapshots[group_index].append(snapshot)
-        return grouped_snapshots
+        return self.__grouped_snapshots
 
 # #######################################################################
 # Functions
