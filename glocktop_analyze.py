@@ -60,7 +60,7 @@ from glocktop_analyze.plugins.pids import Pids
 from glocktop_analyze.plugins.glocks_dependencies import GlocksDependencies
 
 # Plugins that can run on multiply nodes
-from glocktop_analyze.plugins.snapshots_multinode import SnapshotsMultinode
+from glocktop_analyze.plugins.snapshots_multinode import SnapshotsMultiplyNodes
 
 # #####################################################################
 # Global variables
@@ -148,38 +148,47 @@ def __analyze_file(path_to_output_file, gfs2_filesystem_names, show_ended_proces
 # ##############################################################################
 # Plugins
 # ##############################################################################
-def __get_plugins(snapshots, path_to_output_dir, options, is_multi_node_supported=False):
+def __get_plugins_class_names(is_multi_node_supported=False):
     if (is_multi_node_supported):
-        return [SnapshotsMultinode(snapshots, path_to_output_dir, options)]
+        return ["SnapshotsMultiplyNodes"]
     else:
-        return [GlocksActivity(snapshots, path_to_output_dir, options),
-                GSStats(snapshots, path_to_output_dir, options),
-                Snapshots(snapshots, path_to_output_dir, options),
-                GlocksHighDemoteSeconds(snapshots, path_to_output_dir, options),
-                GlocksInSnapshots(snapshots, path_to_output_dir, options),
-                GlocksWaitersTime(snapshots, path_to_output_dir, options),
-                Pids(snapshots, path_to_output_dir, options),
-                GlocksDependencies(snapshots, path_to_output_dir, options)]
+        return ["GlocksActivity",
+                "GSStats",
+                "Snapshots",
+                "GlocksHighDemoteSeconds",
+                "GlocksInSnapshots",
+                "GlocksWaitersTime",
+                "Pids",
+                "GlocksDependencies"]
+
+def __get_plugins(snapshots, path_to_output_dir, options, enabled_plugins, is_multi_node_supported=False):
+    classes = __get_plugins_class_names(is_multi_node_supported)
+    plugins = []
+    for plugin_class_name in classes:
+        plugin = eval(plugin_class_name)(snapshots, path_to_output_dir, options)
+        if ((plugin.get_name() in enabled_plugins) or (not enabled_plugins)):
+            plugins.append(plugin)
+    return plugins
 
 def __plugins_run(snapshots, path_to_output_dir,
                   enable_html_format, enable_png_format, enable_graphs,
-                  plugins_only_to_enable, is_multi_node_supported=False):
+                  enabled_plugins, is_multi_node_supported=False):
     warnings = {}
-    plugins = __get_plugins(snapshots, path_to_output_dir, options, is_multi_node_supported)
+    plugins = __get_plugins(snapshots, path_to_output_dir, options,
+                            enabled_plugins, is_multi_node_supported)
     for plugin in plugins:
-        if ((not plugins_only_to_enable) or (plugin.get_name() in plugins_only_to_enable)):
-            plugin.analyze()
-            plugin.write(html_format=enable_html_format)
-            if (not cmdline_opts.disable_std_out):
-                plugin.console()
-            if (enable_graphs):
-                plugin.graph(enable_png_format)
-            warnings =  merge_dicts(warnings, plugin.get_warnings())
+        plugin.analyze()
+        plugin.write(html_format=enable_html_format)
+        if (not cmdline_opts.disable_std_out):
+            plugin.console()
+        if (enable_graphs):
+            plugin.graph(enable_png_format)
+        warnings = merge_dicts(warnings, plugin.get_warnings())
     return warnings
 
 def __print_plugins_description():
-    plugins = __get_plugins([], "", {})
-    plugins += __get_plugins([], "", {}, True)
+    plugins =  __get_plugins([], "", {}, [], False)
+    plugins += __get_plugins([], "", {}, [], True)
     plugins_str = ""
     for plugin in plugins:
         plugins_str += "  %s: %s\n" %(ColorizeConsoleText.red(plugin.get_name()), plugin.get_description())
@@ -203,9 +212,24 @@ def __print_plugins_description():
 # ##############################################################################
 # Get user selected options and plugin options
 # ##############################################################################
+def __has_enabled_plugins(plugins_to_enable, is_multi_node_supported=False):
+    # If 1 plugin is found to be enabled then return True, else False. An empty
+    # plugins_to_enable means all plugins can be enabled.
+    if (not len(plugins_to_enable)):
+        return True
+    else:
+        plugins =  __get_plugins([], "", {}, [], False)
+        if (is_multi_node_supported):
+            plugins = __get_plugins([], "", {}, [], True)
+        for plugin_name in plugins_to_enable:
+             for plugin in plugins:
+                 if (plugin_name.lower() == plugin.get_name().lower()):
+                    return True
+    return False
+
 def __get_plugin_options(user_options):
-    plugins =  __get_plugins([], "", {})
-    plugins += __get_plugins([], "", {}, True)
+    plugins =  __get_plugins([], "", {}, [], False)
+    plugins += __get_plugins([], "", {}, [], True)
     options = {}
     for option in user_options:
         option_split = option.rsplit("=", 1)
@@ -439,39 +463,41 @@ if __name__ == "__main__":
             pass
 
         options = __get_plugin_options(cmdline_opts.plugins_options)
-        # #######################################################################
-        # Analyze the files and then run plugin against the data.
-        # #######################################################################
-        for path_to_filename in path_to_filenames:
-            message ="The file will be analyzed: %s" %(path_to_filename)
-            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
-            snapshots_by_filesystem = __analyze_file(path_to_filename,
-                                                     cmdline_opts.gfs2_filesystem_names,
-                                                     cmdline_opts.show_ended_process_and_tlocks)
-            # Set the path to output dir.
-            path_to_output_dir = ""
-            if (snapshots_by_filesystem.keys()):
-                 hostname = snapshots_by_filesystem[snapshots_by_filesystem.keys()[0]][0].get_hostname()
-                 path_to_output_dir = os.path.join(cmdline_opts.path_to_output_dir, hostname)
-            message ="The analyzing of the file is complete."
-            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
-
-            # Loop over all the filesystems and plugins and save the warnings.
-            for filesystem_name in snapshots_by_filesystem.keys():
-                snapshots = snapshots_by_filesystem.get(filesystem_name)
-                # All the warnings found on the filesystem after plugins have ran.
-                warnings = __plugins_run(snapshots, path_to_output_dir,
-                                         enable_html_format, enable_png_format,
-                                         enable_graphs,
-                                         cmdline_opts.plugins_only_to_enable)
-                #__output_warnings(warnings, path_to_output_dir,
-                #                  disable_std_out=cmdline_opts.disable_std_out,
-                #                  html_format=enable_html_format)
 
         # #######################################################################
-        # Analyze the files as a group
+        # Analyze the data if there are non-grouped plugins enabled
         # #######################################################################
-        if (cmdline_opts.enable_group_analysis):
+        if (__has_enabled_plugins(cmdline_opts.plugins_only_to_enable, False)):
+            for path_to_filename in path_to_filenames:
+                message ="The file will be analyzed: %s" %(path_to_filename)
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+                snapshots_by_filesystem = __analyze_file(path_to_filename,
+                                                         cmdline_opts.gfs2_filesystem_names,
+                                                         cmdline_opts.show_ended_process_and_tlocks)
+                # Set the path to output dir.
+                path_to_output_dir = ""
+                if (snapshots_by_filesystem.keys()):
+                    hostname = snapshots_by_filesystem[snapshots_by_filesystem.keys()[0]][0].get_hostname()
+                    path_to_output_dir = os.path.join(cmdline_opts.path_to_output_dir, hostname)
+                message ="The analyzing of the file is complete."
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+
+                # Loop over all the filesystems and plugins and save the warnings.
+                for filesystem_name in snapshots_by_filesystem.keys():
+                    snapshots = snapshots_by_filesystem.get(filesystem_name)
+                    # All the warnings found on the filesystem after plugins have ran.
+                    warnings = __plugins_run(snapshots, path_to_output_dir,
+                                             enable_html_format, enable_png_format,
+                                             enable_graphs,
+                                             cmdline_opts.plugins_only_to_enable)
+                    #__output_warnings(warnings, path_to_output_dir,
+                    #                  disable_std_out=cmdline_opts.disable_std_out,
+                    #                  html_format=enable_html_format)
+
+        # #######################################################################
+        # Analyze the data if there are grouped plugins enabled
+        # #######################################################################
+        if (cmdline_opts.enable_group_analysis and __has_enabled_plugins(cmdline_opts.plugins_only_to_enable, True)):
             # Map the hostname-filesystem -> file
             filenames_for_hosts = {}
             # Map the hostname -> filesystems found on the hostname

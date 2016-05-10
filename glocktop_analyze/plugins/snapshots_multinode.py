@@ -21,7 +21,7 @@ from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, table
 from glocktop_analyze.html import generate_table_header, generate_table
 from glocktop_analyze.html import generate_footer
 
-class SnapshotsMultinode(PluginMultinode):
+class SnapshotsMultiplyNodes(PluginMultinode):
     def __init__(self, snapshots, path_to_output_dir, options):
         PluginMultinode.__init__(self, "snapshots-multiply_nodes",
                                  "The stats for the snapshots and dlm activity for multiply nodes.",
