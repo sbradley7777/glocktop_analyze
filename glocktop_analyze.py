@@ -204,7 +204,8 @@ def __print_plugins_description():
         if (hasattr(plugin, "OPTIONS")):
             for option in plugin.OPTIONS:
                 option_name = "  %s.%s" %(plugin.get_name(), option[0])
-                options_str += "%s: %s (Default=%d)\n" %(ColorizeConsoleText.red(option_name), option[1], option[2])
+                options_str += "%s: %s (Default=%s)\n" %(ColorizeConsoleText.red(option_name),
+                                                         option[1], str(option[2]))
     if (options_str):
         print "\nThe plugin options that can be configured are:"
         print options_str.rstrip()

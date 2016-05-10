@@ -32,7 +32,10 @@ class Pids(Plugin):
                 2),
                ("mininum_glocks_count",
                 "The mininum number of different glocks a pid shows up in.",
-                2)]
+                2),
+               ("commands_to_ignore",
+                "A comma seperated list of commands that will be ignored.",
+                "gfs2_quotad")]
 
     def __init__(self, snapshots, path_to_output_dir, options):
         Plugin.__init__(self, "pids", "The pids information relating to glocks.",
@@ -43,6 +46,11 @@ class Pids(Plugin):
         self.__mininum_snapshot_count = self.get_option("mininum_snapshot_count")
         self.__mininum_glocks_count = self.get_option("mininum_glocks_count")
 
+        # List of processes to ignore by default:
+        self.__commands_to_ignore = []
+        for command in self.get_option("commands_to_ignore").split(","):
+            self.__commands_to_ignore.append(command.strip())
+
     def __encode(self, pid, command):
         # Not sure what guranteees no duplicates, that command will not be empty
         # sometimes and not-empty other, etc.
@@ -51,6 +59,23 @@ class Pids(Plugin):
     def __decode(self, hashkey):
         hashkey_split = hashkey.split("-")
         return (hashkey_split[0], hashkey_split[1])
+
+    def __get_text(self, colorize=False):
+        summary = ""
+        if (self.__pids_in_snapshots):
+            summary += "%s\n\n" %(tableize(self.__pids_in_snapshots,
+                                           ["Filesystem", "Pid", "Command",
+                                            "Number of Snapshots Appeared in"], colorize).strip())
+
+        if (self.__pids_using_multiple_glocks):
+            ftable = []
+            for row in self.__pids_using_multiple_glocks:
+                ftable += tableify(row)
+            summary += "%s\n\n" %(tableize(ftable,
+                                           ["Filesystem", "Pid", "Command",
+                                            "Number of Glocks Appeared in",
+                                            "Glock Type/Inode"], colorize).strip())
+        return summary
 
     def analyze(self):
         # Need to create object to hold the pid, command,
@@ -75,8 +100,9 @@ class Pids(Plugin):
         for i in range(0, len(ordered_dict)):
             items = ordered_dict.items()[i]
             (pid, command) = self.__decode(items[0])
-            if (items[1] >= self.__mininum_snapshot_count):
-                self.__pids_in_snapshots.append([self.get_filesystem_name(), pid, command, items[1]])
+            if (not command in self.__commands_to_ignore):
+                if (items[1] >= self.__mininum_snapshot_count):
+                    self.__pids_in_snapshots.append([self.get_filesystem_name(), pid, command, items[1]])
 
         ordered_dict = OrderedDict(sorted(pids_to_glocks.items(), key=lambda t: len(t[1]), reverse=True))
         for i in range(0, len(ordered_dict)):
@@ -87,39 +113,13 @@ class Pids(Plugin):
                 self.__pids_using_multiple_glocks.append([self.get_filesystem_name(), pid, command, len(items[1].split()), items[1]])
 
     def console(self):
-        summary = ""
-        if (self.__pids_in_snapshots):
-            summary += "%s\n\n" %(tableize(self.__pids_in_snapshots,
-                                           ["Filesystem", "Pid", "Command",
-                                            "Number of Snapshots Appeared in"]).strip())
-
-        if (self.__pids_using_multiple_glocks):
-            ftable = []
-            for row in self.__pids_using_multiple_glocks:
-                ftable += tableify(row)
-            summary += "%s\n\n" %(tableize(ftable,
-                                           ["Filesystem", "Pid", "Command",
-                                            "Number of Glocks Appeared in",
-                                            "Glock Type/Inode"]).strip())
+        summary = self.__get_text(colorize=True)
         if (summary):
             print "%s: %s\n%s\n" %(self.get_title(), self.get_description(), summary.strip())
 
     def write(self, html_format=False):
         if (not html_format):
-            wdata = ""
-            if (self.__pids_in_snapshots):
-                wdata += "%s\n\n" %(tableize(self.__pids_in_snapshots,
-                                             ["Filesystem", "Pid", "Command",
-                                              "Number of Snapshots Appeared in"],
-                                             colorize=True).strip())
-            if (self.__pids_using_multiple_glocks):
-                ftable = []
-                for row in self.__pids_using_multiple_glocks:
-                    ftable += tableify(row)
-                wdata += "%s\n\n" %(tableize(ftable,
-                                             ["Filesystem", "Pid", "Command",
-                                              "Number of Glocks Appeared in", "Glock Type/Inode"],
-                                             colorize=False).strip())
+            wdata = self.__get_text(colorize=False)
             if (wdata):
                 wdata = "%s: %s\n%s\n" %(self.get_title(), self.get_description(), wdata.strip())
                 filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
