@@ -86,53 +86,59 @@ class GSStats(Plugin):
                                                             png_format=png_format)
             return path_to_image_files
 
-    def console(self):
-        console_summary = ""
-        filesystem_name = self.get_filesystem_name()
+    def __get_text(self, colorize=False):
+        summary = ""
         for snapshot in self.get_snapshots():
             glocks_stats = snapshot.get_glocks_stats()
             formatted_table = tableize(glocks_stats.get_table(), ["Glock States"] +
-                                       glocktop_analyze.glocks_stats.GLOCK_STATES, colorize=True).rstrip()
-            console_summary += "Glock stats at %s for filesystem: " %(ColorizeConsoleText.orange(
-                glocks_stats.get_date_time().strftime("%Y-%m-%d %H:%M:%S")))
-            console_summary += "%s\n%s\n\n" %(ColorizeConsoleText.orange(
-                filesystem_name), formatted_table)
-        if (console_summary):
-            print "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
-                                   console_summary.strip())
+                                       glocktop_analyze.glocks_stats.GLOCK_STATES, colorize=colorize).rstrip()
+            if (colorize):
+                summary += "Glock stats at %s for filesystem: " %(ColorizeConsoleText.orange(
+                    glocks_stats.get_date_time().strftime("%Y-%m-%d %H:%M:%S")))
+                summary += "%s\n%s\n\n" %(ColorizeConsoleText.orange(
+                    self.get_filesystem_name()), formatted_table)
+            else:
+                 summary += "Glock stats at %s for filesystem: " %(glocks_stats.get_date_time().strftime("%Y-%m-%d %H:%M:%S"))
+                 summary += "%s\n%s\n\n" %(self.get_filesystem_name(), formatted_table)
+        if (summary):
+            return "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
+                                   summary.strip())
+        return ""
+
+    def console(self):
+        summary = self.__get_text(colorize=True)
+        if (summary):
+            print "%s\n" %(summary.rstrip())
 
     def write(self, html_format=False):
-        file_summary = ""
-        filesystem_name = self.get_filesystem_name()
-        filename = ""
+        wdata = ""
+        path_to_output_file = ""
 
         if (not html_format):
             filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
-            for snapshot in self.get_snapshots():
-                glocks_stats = snapshot.get_glocks_stats()
-                file_summary +=  "Glock stats at %s for filesystem: " %(glocks_stats.get_date_time().strftime("%Y-%m-%d %H:%M:%S"))
-                file_summary += "%s\n%s\n\n" %(filesystem_name, str(glocks_stats))
-            if (file_summary):
-                file_summary = "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
-                                                file_summary.strip())
+            path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+                                                            self.get_filesystem_name()), filename)
+            wdata = self.__get_text(colorize=False)
         else:
             bdata = ""
             filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
+            path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+                                                            self.get_filesystem_name()), filename)
             for snapshot in self.get_snapshots():
                 glocks_stats = snapshot.get_glocks_stats()
                 title =  "Glock stats at %s for filesystem: %s" %(glocks_stats.get_date_time().strftime("%Y-%m-%d %H:%M:%S"),
-                                                                   filesystem_name)
+                                                                   self.get_filesystem_name())
                 bdata += generate_table(glocks_stats.get_table(),
                                         ["-"] + GLOCK_TYPES,
                                         title=title,
                                         description="")
             if (bdata):
-                file_summary = "%s\n%s\n%s" %(generate_table_header(), bdata, generate_footer())
+                wdata = "%s\n%s\n%s" %(generate_table_header(), bdata, generate_footer())
 
-        if (file_summary):
+        if (wdata):
             path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
-                                                            self.get_filesystem_name()), filename)
-            if (not write_to_file(path_to_output_file, file_summary, append_to_file=False, create_file=True)):
+                                                            self.get_filesystem_name()), path_to_output_file)
+            if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
                 message = "An error occurred writing to the file: %s" %(path_to_output_file)
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
 

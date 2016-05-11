@@ -34,8 +34,8 @@ class GlocksInSnapshots(Plugin):
                         "The glocks that appear in multiple snapshots.",
                         snapshots, "Glocks in Snapshots", path_to_output_dir,
                         options)
-        self.__table = []
 
+        self.__glocks_in_snapshots = {}
         self.__minimum_glocks_in_snapshots = self.get_option("mininum_glocks_in_snapshots")
 
     def __encode(self, glock_type, glock_inode):
@@ -45,47 +45,55 @@ class GlocksInSnapshots(Plugin):
         hashkey_split = hashkey.split("/")
         return (hashkey_split[0], hashkey_split[1])
 
+    def __get_text(self, colorize=False):
+        table = []
+        for pair in sorted(self.__glocks_in_snapshots.items(), key=itemgetter(1), reverse=True):
+            if (pair[1] >= self.__minimum_glocks_in_snapshots):
+                table.append([self.get_filesystem_name(), pair[0], pair[1]])
+        if (table):
+            return "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
+                                    tableize(table, ["Filesystem Name", "Glock Type/Glocks Inode",
+                                                     "Number of Snapshots Appeared in"], colorize=colorize).strip())
+
     def analyze(self):
-        glocks_in_snapshots = {}
         for snapshot in self.get_snapshots():
-            message = "There was %d glocks found on the filesystem: %s." %(len(snapshot.get_glocks()), self.get_filesystem_name())
-            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+            # message = "There was %d glocks found on the filesystem: %s." %(len(snapshot.get_glocks()),
+            #                                                                self.get_filesystem_name())
+            # logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
             for glock in snapshot.get_glocks():
                 # Require that glock is has at least an object of holder or
                 # waiter assoicated with it.
                 if (len(glock.get_holders()) or (not glock.get_glock_object() == None)):
                     hashkey = self.__encode(glock.get_type(), glock.get_inode())
-                    if (not glocks_in_snapshots.has_key(hashkey)):
-                        glocks_in_snapshots[hashkey] = 0
-                    glocks_in_snapshots[hashkey] += 1
-        self.__table = []
-        for pair in sorted(glocks_in_snapshots.items(), key=itemgetter(1), reverse=True):
-            if (pair[1] >= self.__minimum_glocks_in_snapshots):
-                self.__table.append([self.get_filesystem_name(), pair[0], pair[1]])
+                    if (not self.__glocks_in_snapshots.has_key(hashkey)):
+                        self.__glocks_in_snapshots[hashkey] = 0
+                    self.__glocks_in_snapshots[hashkey] += 1
 
 
     def console(self):
-        if (self.__table):
-            print "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
-                  tableize(self.__table, ["Filesystem Name", "Glock Type/Glocks Inode",
-                                          "Number of Snapshots Appeared in"]).strip())
+        summary = self.__get_text(colorize=True)
+        if (summary):
+            print "%s\n" %(summary.rstrip())
 
     def write(self, html_format=False):
-        if (self.__table):
+        if (self.__glocks_in_snapshots):
             wdata = ""
             path_to_output_file = ""
             if (not html_format):
                 filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                                 self.get_filesystem_name()), filename)
-                wdata = "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
-                                         tableize(self.__table, ["Filesystem Name", "Glock Type/Glocks Inode",
-                                                                 "Number of Snapshots Appeared in"]).strip())
+                wdata = self.__get_text(colorize=False)
+
             else:
                 filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                                 self.get_filesystem_name()), filename)
-                bdata = generate_table(self.__table,
+                table = []
+                for pair in sorted(self.__glocks_in_snapshots.items(), key=itemgetter(1), reverse=True):
+                    if (pair[1] >= self.__minimum_glocks_in_snapshots):
+                        table.append([self.get_filesystem_name(), pair[0], pair[1]])
+                bdata = generate_table(table,
                                        ["Filesystem Name", "Glock Type/Glocks Inode", "Number of Snapshots Appeared in"],
                                        title=self.get_title(),
                                        description="The number of times that a glock appeared in a snapshot.")

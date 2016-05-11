@@ -72,7 +72,7 @@ class SnapshotsMultiplyNodes(PluginMultinode):
             snapshots_table_by_group  +=  "%s\n\n" %(tableize(gtable, ["Hostname", "Filesystem",
                                                                        "Snapshot Time"], colorize)).strip()
         if (snapshots_table_by_group):
-            summary += "Snapshots Grouped by Time Taken\n%s" %(snapshots_table_by_group)
+            summary += "Snapshots Grouped by Time Snapshot Taken\n%s" %(snapshots_table_by_group)
         return summary
 
     def analyze(self):

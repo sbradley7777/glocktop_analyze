@@ -32,6 +32,28 @@ class Snapshots(Plugin):
         self.__snapshot_count = 0
         self.__dlm_activity = []
 
+    def __get_text(self, colorize=False):
+        summary = ""
+        if (self.get_snapshots()):
+            snapshots_summary = tableize([[self.get_hostname(), self.get_filesystem_name(),
+                                           str(self.__snapshot_count), self.__start_time,
+                                           self.__stop_time]],
+                                         ["Hostname", "Filesystem", "Snapshots",
+                                          "Start Time", "Stop Time"], colorize=colorize).strip()
+            if (snapshots_summary):
+                summary += "\nThen number of snapshots taken, start time, and end time.\n%s\n" %(snapshots_summary)
+        if (self.__dlm_activity):
+            dlm_activity_summary = tableize(self.__dlm_activity, ["Hostname", "Filesystem",
+                                                                  "Snapshot Time",
+                                                                  "Number of DLM Waiters"],
+                                            colorize=colorize).strip()
+            if (dlm_activity_summary):
+                summary += "\nThe snapshots that contained at least 1 DLM waiter.\n%s\n" %(dlm_activity_summary)
+
+        if (summary):
+            return "%s: %s\n%s\n" %(self.get_title(), self.get_description(), summary)
+        return ""
+
     def analyze(self):
         for snapshot in self.get_snapshots():
             self.__snapshot_count += 1
@@ -40,39 +62,18 @@ class Snapshots(Plugin):
                 self.__dlm_activity.append([self.get_hostname(), self.get_filesystem_name(), snapshot.get_date_time(), dlm_activity.get_waiter_count()])
 
     def console(self):
-        summary = ""
-        if (self.get_snapshots()):
-            summary += "%s\n\n" %(tableize([[self.get_hostname(), self.get_filesystem_name(),
-                                             str(self.__snapshot_count), self.__start_time, self.__stop_time]],
-                                           ["Hostname", "Filesystem", "Snapshots", "Start Time", "Stop Time"]).strip())
-        if (self.__dlm_activity):
-            summary += "%s\n\n" %(tableize(self.__dlm_activity, ["Hostname", "Filesystem",
-                                                                 "Snapshot Time",
-                                                                 "Number of DLM Waiters"]).strip())
-
+        summary = self.__get_text(colorize=True)
         if (summary):
-            print "%s: %s\n%s\n" %(self.get_title(), self.get_description(), summary.strip())
+            print "%s\n" %(summary.rstrip())
 
     def write(self, html_format=False):
         wdata =""
         path_to_output_file = ""
         if (not html_format):
-            wdata = ""
-            if (self.__snapshot_count > 0):
-                wdata += "%s\n\n" %(tableize([[self.get_hostname(), self.get_filesystem_name(),
-                                               str(self.__snapshot_count), self.__start_time,
-                                               self.__stop_time]],
-                                             ["Hostname", "Filesystem", "Snapshots",
-                                              "Start Time", "Stop Time"], colorize=False).strip())
-            if (self.__dlm_activity):
-                wdata += "%s\n\n" %(tableize(self.__dlm_activity,
-                                             ["Hostname", "Filesystem", "Snapshot Time", "Number of DLM Waiters"],
-                                             colorize=False).strip())
-            if (wdata):
-                wdata = "%s: %s\n%s\n" %(self.get_title(), self.get_description(), wdata.strip())
-                filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
-                path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
-                                                                self.get_filesystem_name()), filename)
+            filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
+            path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+                                                            self.get_filesystem_name()), filename)
+            wdata = self.__get_text(colorize=False)
         else:
             bdata = ""
             if (self.__snapshot_count > 0):
