@@ -72,11 +72,13 @@ class Pids(Plugin):
             ftable = []
             for row in self.__pids_using_multiple_glocks:
                 ftable += tableify(row)
-            summary += "The glocks the pids appears in queue as holder or waiter\n"
+            summary += "The glocks the pids appears in queue as holder or waiter.\n"
             summary += "%s\n\n" %(tableize(ftable,
                                            ["Filesystem", "Pid", "Command",
                                             "Number of Glocks Appeared in",
                                             "Glock Type/Inode"], colorize).strip())
+        if (summary):
+            summary =  "%s: %s\n\n%s\n" %(self.get_title(), self.get_description(), summary.strip())
         return summary
 
     def analyze(self):
@@ -117,13 +119,12 @@ class Pids(Plugin):
     def console(self):
         summary = self.__get_text(colorize=True)
         if (summary):
-            print "%s: %s\n\n%s\n" %(self.get_title(), self.get_description(), summary.strip())
+            print "%s\n" %(summary.rstrip())
 
     def write(self, html_format=False):
         if (not html_format):
             wdata = self.__get_text(colorize=False)
             if (wdata):
-                wdata = "%s: %s\n\n%s\n" %(self.get_title(), self.get_description(), wdata.strip())
                 filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                                 self.get_filesystem_name()), filename)

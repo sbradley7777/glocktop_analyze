@@ -20,7 +20,7 @@ from glocktop_analyze.html import generate_footer
 class GlocksHighDemoteSeconds(Plugin):
     def __init__(self, snapshots, path_to_output_dir, options):
         Plugin.__init__(self, "glocks_high_demote_seconds",
-                        "The glocks with demote seconds higher than zero.",
+                        "The glocks with demote time greater than zero seconds.",
                         snapshots, "Glocks with High Demote Seconds",
                         path_to_output_dir, options)
         self.__table = []
@@ -56,9 +56,10 @@ class GlocksHighDemoteSeconds(Plugin):
         for hashkey in self.__glocks_high_demote_seconds.keys():
             table += self.__tableify(hashkey, self.__glocks_high_demote_seconds.get(hashkey))
         if (table):
-            return "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
-                                    tableize(table,["Filesystem", "Glock", "Demote Seconds"],
-                                             colorize=colorize).strip())
+            return "%s: %s\n\n%s\n%s\n" %(self.get_title(), self.get_description(),
+                                          "Glocks with demoting of a glocks taking greater than 0 seconds to complete.",
+                                          tableize(table,["Filesystem", "Glock", "Demote Seconds"],
+                                                   colorize=colorize).strip())
 
         return ""
 

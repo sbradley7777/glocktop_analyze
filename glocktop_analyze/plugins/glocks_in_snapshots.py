@@ -51,9 +51,10 @@ class GlocksInSnapshots(Plugin):
             if (pair[1] >= self.__minimum_glocks_in_snapshots):
                 table.append([self.get_filesystem_name(), pair[0], pair[1]])
         if (table):
-            return "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
-                                    tableize(table, ["Filesystem Name", "Glock Type/Glocks Inode",
-                                                     "Number of Snapshots Appeared in"], colorize=colorize).strip())
+            return "%s: %s\n\n%s\n%s\n" %(self.get_title(), self.get_description(),
+                                          "Glocks that appeared in at least %d snapshots." %(self.__minimum_glocks_in_snapshots),
+                                          tableize(table, ["Filesystem Name", "Glock Type/Glocks Inode",
+                                                           "Number of Snapshots Appeared in"], colorize=colorize).strip())
 
     def analyze(self):
         for snapshot in self.get_snapshots():

@@ -101,7 +101,8 @@ class GSStats(Plugin):
                  summary += "Glock stats at %s for filesystem: " %(glocks_stats.get_date_time().strftime("%Y-%m-%d %H:%M:%S"))
                  summary += "%s\n%s\n\n" %(self.get_filesystem_name(), formatted_table)
         if (summary):
-            return "%s: %s\n%s\n" %(self.get_title(), self.get_description(),
+            summary = "The stats for the different states and types of the glocks.\n%s" %(summary)
+            return "%s: %s\n\n%s\n" %(self.get_title(), self.get_description(),
                                    summary.strip())
         return ""
 
