@@ -29,7 +29,7 @@ class Plugin(object):
         self.__snapshots = snapshots
         self.__title = title
         self.__path_to_output_dir = path_to_output_dir
-        self.__warnings = {}
+        self.__warnings = []
 
         self.__options = {}
         self.__multiply_node_enabled = multiply_node_enabled
@@ -127,10 +127,9 @@ class Plugin(object):
     def get_warnings(self):
         return self.__warnings
 
-    def add_warning(self, wtype, description):
-        if (not self.__warnings.has_key(wtype)):
-            self.__warnings[wtype] = []
-        self.__warnings[wtype].append(description)
+    def add_warning(self, admonition):
+        if (not admonition in self.get_warnings()):
+            self.__warnings.append(admonition)
 
     def console(self):
         pass
@@ -206,6 +205,60 @@ class PluginMultinode(Plugin):
         # Returns map of snapshots grouped together. The key is the group count
         # and value is a list of snapshots that were taken around the same time.
         return self.__grouped_snapshots
+
+class Admonition:
+    # A class that will hold a warning/notice about something found.
+    def __init__(self, hostname, filesystem_name, wtype, description, uri=""):
+        self.__hostname = hostname
+        self.__filesystem_name = filesystem_name
+        self.__type = wtype
+        self.__description = description
+        # A uri for a web page or document that contains information about the
+        # warning.
+        self.__uri = uri
+
+    def __str__(self):
+        return "%s (hostname: %s): %s - %s" %(self.get_filesystem_name(),
+                                              self.get_hostname(),
+                                              self.get_type(),
+                                              self.get_description())
+
+    def __tuple__(self):
+        return (self.get_hostname(), self.get_type(),
+                self.get_description())
+
+    def __eq__(self, other):
+        tuple1 = (self.get_hostname(), self.get_filesystem_name(),
+                  self.get_type(), self.get_description(),
+                  self.get_uri())
+        tuple2 = (other.get_hostname(), other.get_filesystem_name(),
+                  other.get_type(), other.get_description(),
+                  other.get_uri())
+        return (tuple1 == tuple2)
+
+    def __lt__(self, other):
+        tuple1 = (self.get_hostname(), self.get_filesystem_name(),
+                  self.get_type(), self.get_description(),
+                  self.get_uri())
+        tuple2 = (other.get_hostname(), other.get_filesystem_name(),
+                  other.get_type(), other.get_description(),
+                  other.get_uri())
+        return (tuple1 < tuple2)
+
+    def get_hostname(self):
+        return self.__hostname
+
+    def get_filesystem_name(self):
+        return self.__filesystem_name
+
+    def get_type(self):
+        return self.__type
+
+    def get_description(self):
+        return self.__description
+
+    def get_uri(self):
+        return self.__uri
 
 # #######################################################################
 # Functions

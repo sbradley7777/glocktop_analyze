@@ -12,7 +12,7 @@ import logging.handlers
 import os.path
 
 import glocktop_analyze
-from glocktop_analyze.plugins import Plugin
+from glocktop_analyze.plugins import Plugin, Admonition
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
 from glocktop_analyze.html import generate_table_header, generate_table
 from glocktop_analyze.html import generate_footer
@@ -66,6 +66,7 @@ class GlocksHighDemoteSeconds(Plugin):
     def analyze(self):
         self.__glocks_high_demote_seconds = {}
         for snapshot in self.get_snapshots():
+            glock_high_demote_seconds_found = False
             for glock in snapshot.get_glocks():
                 demote_time = int(glock.get_demote_time())
                 if (demote_time > 0):
@@ -75,8 +76,11 @@ class GlocksHighDemoteSeconds(Plugin):
                     demote_time_str = "%s %d" %(self.__glocks_high_demote_seconds.get(hashkey),
                                                 demote_time)
                     self.__glocks_high_demote_seconds[hashkey] = demote_time_str
-        if (self.__glocks_high_demote_seconds):
-            self.add_warning("Glocks", "There were glocks found with a higher than zero time to demote a glock on filesystem: %s." %(self.get_filesystem_name()))
+                    glock_high_demote_seconds_found = True
+            if (glock_high_demote_seconds_found):
+                warning_msg =  "There were glocks with demote time greater than zero."
+                self.add_warning(Admonition(snapshot.get_hostname(), self.get_filesystem_name(),
+                                            "Glocks", warning_msg, ""))
 
     def console(self):
         summary = self.__get_text(colorize=True)

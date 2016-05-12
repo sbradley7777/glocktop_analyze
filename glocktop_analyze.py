@@ -48,8 +48,10 @@ from glocktop_analyze.glocks_stats import GlocksStats, GlockStat
 from glocktop_analyze.parsers.snapshot import parse_snapshot, process_snapshot
 from glocktop_analyze.parsers.rawfile import get_hostname, get_filesystems
 from glocktop_analyze.html import generate_header, generate_footer
+from glocktop_analyze.html import generate_table_header, generate_table
 
 # Plugins
+from glocktop_analyze.plugins import Admonition
 from glocktop_analyze.plugins.glocks_activity import GlocksActivity
 from glocktop_analyze.plugins.glocks_stats import GSStats
 from glocktop_analyze.plugins.snapshots import Snapshots
@@ -73,34 +75,52 @@ VERSION_NUMBER = "0.1-7"
 # #####################################################################
 def __output_warnings(warnings, path_to_output_dir, disable_std_out=True, html_format=False):
     if (warnings):
+        sorted_warnings =  sorted(warnings, key=lambda x: x.get_filesystem_name(), reverse=False)
+        def get_warning_text(warnings, colorize=False):
+            warnings_table = []
+            for warning in warnings:
+                uri = "-"
+                if (warning.get_uri()):
+                    uri = warning.get_uri()
+                warnings_table += [[warning.get_hostname(),
+                                    warning.get_filesystem_name(),
+                                    warning.get_type(),
+                                    warning.get_description(),
+                                    uri]]
+            header = "Warnings Found:"
+            if (warnings_table and colorize):
+                header = ColorizeConsoleText.red("%s" %(header))
+            return "\n\n%s\n%s\n" %(header, tableize(warnings_table,
+                                                 ["Hostname", "Filesystem",
+                                                  "Type", "Description",
+                                                  "Link to Article"],
+                                                 colorize=colorize).strip())
+
         if (not disable_std_out):
-            warnings_str = ""
-            for wkey in warnings.keys():
-                warnings_str += "%s\n" %(ColorizeConsoleText.red(wkey))
-                for item in warnings.get(wkey):
-                    warnings_str += "  - %s\n" %(item)
-            print ColorizeConsoleText.red("Warnings Found:\n") +  warnings_str
-        wdata = ""
-        path_to_output_file = ""
-        if (not html_format):
-            path_to_output_file = os.path.join(path_to_output_dir, "warnings.txt")
-            for wkey in warnings.keys():
-                wdata += "%s\n" %(wkey)
-                for item in warnings.get(wkey):
-                    wdata += "  - %s\n" %(item)
-            wdata = "Warnings Found:\n" +  wdata
-        else:
+            print get_warning_text(sorted_warnings, colorize=True)
+        # Write warnings to text file or html file
+        wdata = "%s\n" %(get_warning_text(sorted_warnings, colorize=False).strip())
+        path_to_output_file = os.path.join(path_to_output_dir, "warnings.txt")
+        if (html_format):
             path_to_output_file = os.path.join(path_to_output_dir, "warnings.html")
             bdata = ""
-            for wkey in warnings.keys():
-                # Get the warnings that were found.
-                bdata += "<b>%s</b><BR/>" %(wkey)
-                for item in warnings.get(wkey):
-                    bdata += "&nbsp;&nbsp;&nbsp;%s<BR/>" %(item)
-            if (bdata):
-                title = "<center><h3>Warnings Found on Filesystems</h3></center>"
-                wdata = "%s\n%s\n%s\n<BR/><HR/><BR/>%s" %(generate_header(), title, bdata, generate_footer())
-
+            warnings_table = []
+            for warning in sorted_warnings:
+                uri = "-"
+                if (warning.get_uri()):
+                    uri = warning.get_uri()
+                warnings_table += [[warning.get_hostname(),
+                                    warning.get_filesystem_name(),
+                                    warning.get_type(),
+                                    warning.get_description(),
+                                    uri]]
+                bdata = generate_table(warnings_table,
+                                       ["Hostname", "Filesystem",
+                                        "Type", "Description",
+                                        "Link to Article"],
+                                       title="Warnings",
+                                       description="The following is a list of potential issues found:")
+                wdata = "%s\n%s\n%s" %(generate_table_header(), bdata, generate_footer())
         if (wdata):
             if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
                 message = "An error occurred writing the file: %s" %(path_to_output_file)
@@ -174,7 +194,7 @@ def __get_plugins(snapshots, path_to_output_dir, options, enabled_plugins, is_mu
 def __plugins_run(snapshots, path_to_output_dir,
                   enable_html_format, enable_png_format, enable_graphs,
                   enabled_plugins, is_multi_node_supported=False):
-    warnings = {}
+    warnings = []
     plugins = __get_plugins(snapshots, path_to_output_dir, options,
                             enabled_plugins, is_multi_node_supported)
     for plugin in plugins:
@@ -184,7 +204,7 @@ def __plugins_run(snapshots, path_to_output_dir,
             plugin.console()
         if (enable_graphs):
             plugin.graph(enable_png_format)
-        warnings = merge_dicts(warnings, plugin.get_warnings())
+        warnings += plugin.get_warnings()
     return warnings
 
 def __print_plugins_description():
@@ -226,7 +246,7 @@ def __has_enabled_plugins(plugins_to_enable, is_multi_node_supported=False):
         for plugin_name in plugins_to_enable:
              for plugin in plugins:
                  if (plugin_name.lower() == plugin.get_name().lower()):
-                    return True
+                     return True
     return False
 
 def __get_plugin_options(user_options):
@@ -293,9 +313,9 @@ def __get_cmdline_options(cmd_parser) :
                           type="string",
                           metavar="<gfs2 filesystem name>",
                           default=[])
-    cmd_parser.add_option("-e", "--enable_only",
+    cmd_parser.add_option("-e", "--enable_plugins",
                           action="extend",
-                          dest="plugins_only_to_enable",
+                          dest="plugins_to_enable",
                           help="plugins to only enable and run against the data",
                           type="string",
                           metavar="<plugin name>",
@@ -379,13 +399,34 @@ class ExtendOption (Option):
 
     def take_action(self, action, dest, opt, value, values, parser):
         if (action == "extend") :
-            valueList = []
+            valueList=[]
             try:
                 for v in value.split(","):
-                    # Need to add code for dealing with paths if there is option for paths.
-                    newValue = value.strip().rstrip()
-                    if (len(newValue) > 0):
-                        valueList.append(newValue)
+                    if ((opt == "-p") or (opt == "--path_to_filename")):
+                        if (v[0] == '~' and not os.path.exists(v)):
+                            v = os.path.expanduser(v)
+                        elif (not v[0] == '/' and not os.path.exists(v)):
+                            v = os.path.abspath(v)
+                        # only append paths that exists.
+                        if (os.path.exists(v)) :
+                            valueList.append(v)
+                        else:
+                            message = "The filepath does not exist: %s" %(v)
+                            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
+                    elif ((opt == "-o") or (opt == "--plugins_option")):
+                        # Verify that is the format: key=value, where key is of format parent.optionname
+                        # Example: glocks_in_snapshots.mininum_glocks_in_snapshots=11
+                        keyEqualSplit = v.split("=")
+                        if (len(keyEqualSplit) == 2):
+                            valueList.append(v)
+                        else:
+                            message = "The plugin option has invalid syntax:" %(v)
+                            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
+                    elif ((opt == "-e") or (opt == "--enable_plugin")):
+                            valueList.append(v)
+                    else:
+                        # append everything else that does not deal with paths
+                        valueList.append(v)
             except:
                 pass
             else:
@@ -471,7 +512,9 @@ if __name__ == "__main__":
         # #######################################################################
         # Analyze the data if there are non-grouped plugins enabled
         # #######################################################################
-        if (__has_enabled_plugins(cmdline_opts.plugins_only_to_enable, False)):
+        if (__has_enabled_plugins(cmdline_opts.plugins_to_enable, False)):
+            # Save any warning that are found when plugins are ran.
+            warnings = []
             for path_to_filename in path_to_filenames:
                 message ="The file will be analyzed: %s" %(path_to_filename)
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
@@ -490,18 +533,19 @@ if __name__ == "__main__":
                 for filesystem_name in snapshots_by_filesystem.keys():
                     snapshots = snapshots_by_filesystem.get(filesystem_name)
                     # All the warnings found on the filesystem after plugins have ran.
-                    warnings = __plugins_run(snapshots, path_to_output_dir,
-                                             enable_html_format, enable_png_format,
-                                             enable_graphs,
-                                             cmdline_opts.plugins_only_to_enable)
-                    #__output_warnings(warnings, path_to_output_dir,
-                    #                  disable_std_out=cmdline_opts.disable_std_out,
-                    #                  html_format=enable_html_format)
+                    warnings += __plugins_run(snapshots, path_to_output_dir,
+                                              enable_html_format, enable_png_format,
+                                              enable_graphs,
+                                              cmdline_opts.plugins_to_enable)
+            # Output or write any warnings found.
+            __output_warnings(warnings, path_to_output_dir,
+                              disable_std_out=cmdline_opts.disable_std_out,
+                              html_format=enable_html_format)
 
         # #######################################################################
         # Analyze the data if there are grouped plugins enabled
         # #######################################################################
-        if (cmdline_opts.enable_group_analysis and __has_enabled_plugins(cmdline_opts.plugins_only_to_enable, True)):
+        if (cmdline_opts.enable_group_analysis and __has_enabled_plugins(cmdline_opts.plugins_to_enable, True)):
             # Map the hostname-filesystem -> file
             filenames_for_hosts = {}
             # Map the hostname -> filesystems found on the hostname
@@ -560,7 +604,7 @@ if __name__ == "__main__":
                                                  path_to_output_dir,
                                                  enable_html_format, enable_png_format,
                                                  enable_graphs,
-                                                 cmdline_opts.plugins_only_to_enable,
+                                                 cmdline_opts.plugins_to_enable,
                                                  is_multi_node_supported=True)
                         #warnings = merge_dicts(warnings, __output_warnings(warnings, path_to_output_dir,
                         #                                        disable_std_out=cmdline_opts.disable_std_out,

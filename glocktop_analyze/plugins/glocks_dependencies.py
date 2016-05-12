@@ -14,7 +14,7 @@ import logging.handlers
 import os.path
 
 import glocktop_analyze
-from glocktop_analyze.plugins import Plugin
+from glocktop_analyze.plugins import Plugin, Admonition
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file
 from glocktop_analyze.html import generate_footer
 from glocktop_analyze.html import generate_css_header
@@ -197,8 +197,9 @@ class GlocksDependencies(Plugin):
                 self.__glocks_dependencies_snapshots.append(pidglocks_in_snapshot)
 
         if (self.__glocks_dependencies_snapshots):
-            warning_msg = "Possible glock lock contention found on filesystem: %s." %(self.get_filesystem_name())
-            self.add_warning("Glocks", warning_msg)
+            warning_msg =  "Possible lock contention found on filesystem."
+            self.add_warning(Admonition(snapshot.get_hostname(), self.get_filesystem_name(),
+                                        "Glocks", warning_msg, ""))
 
     def console(self):
         summary = self.__get_text(colorize=True)
