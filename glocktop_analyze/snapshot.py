@@ -50,16 +50,20 @@ class Snapshot():
             return glocks_not_ended_process
         return self.__glocks
 
+    def get_glock_holders(self):
+        glock_holders = []
+        glocks = self.get_glocks()
+        for glock in glocks:
+            gh = glock.get_glock_holder()
+            if (not gh == None):
+                glock_holders.append(glock)
+        return glock_holders
+
     def find_glock(self, glock_type, glock_inode):
-        glocks = []
         for glock in self.get_glocks():
-            if (glock_inode == glock.get_inode()):
-                if (0 < cmdline_opts.glock_type < 10):
-                    if (glock_type == glock.get_type()):
-                        glocks.append(glock)
-                else:
-                    glocks.append(glock)
-        return glocks
+            if ((glock_type == str(glock.get_type())) and (glock_inode == str(glock.get_inode()))):
+                return glock
+        return None
 
     def get_glocks_stats(self):
         return self.__glocks_stats
