@@ -223,10 +223,6 @@ class Admonition:
                                               self.get_type(),
                                               self.get_description())
 
-    def __tuple__(self):
-        return (self.get_hostname(), self.get_type(),
-                self.get_description())
-
     def __eq__(self, other):
         tuple1 = (self.get_hostname(), self.get_filesystem_name(),
                   self.get_type(), self.get_description(),
