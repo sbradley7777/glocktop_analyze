@@ -60,6 +60,7 @@ from glocktop_analyze.plugins.glocks_in_snapshots import GlocksInSnapshots
 from glocktop_analyze.plugins.glocks_waiters_time import GlocksWaitersTime
 from glocktop_analyze.plugins.pids import Pids
 from glocktop_analyze.plugins.glocks_dependencies import GlocksDependencies
+from glocktop_analyze.plugins.glocks_hung import GlocksHung
 
 # Plugins that can run on multiply nodes
 from glocktop_analyze import group_snapshots
@@ -180,7 +181,8 @@ def __get_plugins_class_names(is_multi_node_supported=False):
                 "GlocksInSnapshots",
                 "GlocksWaitersTime",
                 "Pids",
-                "GlocksDependencies"]
+                "GlocksDependencies",
+                "GlocksHung"]
 
 def __get_plugins(snapshots, path_to_output_dir, options, enabled_plugins, is_multi_node_supported=False):
     classes = __get_plugins_class_names(is_multi_node_supported)
