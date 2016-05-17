@@ -41,7 +41,7 @@ class PidGlocksInSnapshot:
     def get_date_time(self):
         return self.__date_time
 
-    def get_pidglocks_all(self):
+    def get_pidglocks(self):
         return self.__list_of_pidglocks
 
 class PidGlocks:
@@ -100,7 +100,7 @@ class GlocksDependencies(Plugin):
         for pidglocks_in_snapshot in self.__glocks_dependencies_snapshots:
             snapshot_summary = ""
             # Review all the glocks for a particular pid.
-            for pidglocks in pidglocks_in_snapshot.get_pidglocks_all():
+            for pidglocks in pidglocks_in_snapshot.get_pidglocks():
                 pid_summary = ""
                 glock_holder_flag_found = 0
                 for glock in pidglocks.get_glocks():
@@ -136,7 +136,7 @@ class GlocksDependencies(Plugin):
         for pidglocks_in_snapshot in self.__glocks_dependencies_snapshots:
             snapshot_summary = ""
             # Review all the glocks for a particular pid.
-            for pidglocks in pidglocks_in_snapshot.get_pidglocks_all():
+            for pidglocks in pidglocks_in_snapshot.get_pidglocks():
                 pid_summary = ""
                 glock_holder_flag_found = 0
                 for glock in pidglocks.get_glocks():
