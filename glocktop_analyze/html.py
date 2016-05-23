@@ -16,57 +16,31 @@ from glocktop_analyze.utilities import LogWriter, mkdirs, write_to_file
 def generate_header():
     return "<html>\n\t<head>\n\t</head>\n\t<body>\n"
 
-def generate_css_header():
+def generate_css_header(include_css_table=False):
     style =  "<style>\n"
-    style += "span.red {"
-    style += "color:#ff0000;"
-    style += "}\n"
-    style += "span.orange {"
-    style += "color:#ffa500;"
-    style += "}\n"
+    style += generate_css_colors()
+    if (include_css_table):
+        style += generate_css_tables()
     style += "</style>\n"
     header_pre = "<html>\n\t<head>\n"
     header_post = "</head>\n\t<body>\n"
     return "%s\n%s\n%s\n" %(header_pre, style, header_post)
 
-def generate_table_header():
-    style =  "<style>\n"
-    style += "table, th, td {\n"
-    style += "border: 1px solid black;\n"
-    style += "border-collapse: collapse;\n"
-    style += "}\n"
-    style += "th, td {\n"
-    style += "padding: 5px;\n"
-    style += "text-align: left;\n"
-    style += "}\n"
+def generate_css_colors():
+    style = ""
+    style += "body {color: white; background: black;}\n"
+    style += "span.red {color:#ff0000;}\n"
+    style += "span.orange {color:#ffa500;}\n"
+    return style
 
-    style += "table#t01 {\n"
-    style += "width: 100%;\n"
-    #style += "    background-color: #f1f1c1;\n"
-    style += "}\n"
-    """
-    style += "table#t01 tr:nth-child(even) {\n"
-    style += "background-color: #eee;\n"
-    style += "}\n"
-
-    style += "table#t01 tr:nth-child(odd) {\n"
-    style += "background-color:#fff;\n"
-    style += "}\n"
-    """
-    style += "table#t01 th{\n"
-    style += "background-color: black;\n"
-    style += "color: white;\n"
-    style += "}\n"
-
-    style += "span.red {"
-    style += "color:#ff0000;"
-    style += "}\n"
-    style += "</style>\n"
-
-
-    header_pre = "<html>\n\t<head>\n"
-    header_post = "</head>\n\t<body>\n"
-    return "%s%s%s" %(header_pre, style, header_post)
+def generate_css_tables():
+    style = ""
+    style += "table {width:100%}\n"
+    style += "table, th, td {border: 1px solid white; border-collapse: collapse; }\n"
+    style += "th, td {padding: 5px; text-align: left;}\n"
+    style += "th{background-color: white; color: black;}\n"
+    style += "#tr_grey {background-color: grey; color: white;}\n"
+    return style
 
 def generate_table(table, header, title="", description="", caption=""):
     if (not table):
@@ -76,7 +50,7 @@ def generate_table(table, header, title="", description="", caption=""):
         htable += "<center><H3>%s</H3>\n<BR></center>" %(title)
     if (description):
         htable += "%s<BR/>" %(description)
-    htable +=  '<table border="1" id="t01">\n'
+    htable +=  '<table border="1">\n'
     #if (title):
     #    htable += "<caption><b>%s</b></caption>" %(title)
     if (header):
@@ -84,21 +58,23 @@ def generate_table(table, header, title="", description="", caption=""):
         for item in header:
             htable += "<th>%s</th>" %(item)
         htable += "</tr>\n"
-    index = 1
     # Alternate the colors of table row background unless the first value is
     # just a "-". If first is "-" then it is assume it is carry over from
     # previous row.
+    index = 0
     for row in table:
+        if (not row[0].strip() == "-"):
+            # If row does not start with dash then not continuation so increment
+            # index so next color be choosen for row.
+            index += 1
         if (index % 2 == 0):
             htable += "<tr>"
         else:
-            htable += "<tr bgcolor=\"#eee\">"
+            #htable += "<tr bgcolor=\"#808080\">
+            htable += '<tr id="tr_grey">'
         for item in row:
             htable += "<td>%s</td>" %(item)
         htable += "</tr>\n"
-        if (len(row) > 0):
-            if (not row[0].strip() == "-"):
-                index += 1
     htable +=  "</table><BR/><HR/>\n"
     return htable
 

@@ -47,8 +47,8 @@ from glocktop_analyze.glock import Glock, GlockHolder, GlockObject
 from glocktop_analyze.glocks_stats import GlocksStats, GlockStat
 from glocktop_analyze.parsers.snapshot import parse_snapshot, process_snapshot
 from glocktop_analyze.parsers.rawfile import get_hostname, get_filesystems
-from glocktop_analyze.html import generate_header, generate_footer
-from glocktop_analyze.html import generate_table_header, generate_table
+from glocktop_analyze.html import generate_css_header, generate_footer
+from glocktop_analyze.html import generate_table
 
 # Plugins
 from glocktop_analyze.plugins import Admonition
@@ -60,7 +60,6 @@ from glocktop_analyze.plugins.glocks_in_snapshots import GlocksInSnapshots
 from glocktop_analyze.plugins.glocks_waiters_time import GlocksWaitersTime
 from glocktop_analyze.plugins.pids import Pids
 from glocktop_analyze.plugins.glocks_dependencies import GlocksDependencies
-from glocktop_analyze.plugins.glocks_hung import GlocksHung
 
 # Plugins that can run on multiply nodes
 from glocktop_analyze import group_snapshots
@@ -121,7 +120,7 @@ def __output_warnings(warnings, path_to_output_dir, disable_std_out=True, html_f
                                         "Link to Article"],
                                        title="Warnings",
                                        description="The following is a list of potential issues found:")
-                wdata = "%s\n%s\n%s" %(generate_table_header(), bdata, generate_footer())
+                wdata = "%s\n%s\n%s" %(generate_css_header(include_css_table=True), bdata, generate_footer())
         if (wdata):
             if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
                 message = "An error occurred writing the file: %s" %(path_to_output_file)
@@ -181,8 +180,7 @@ def __get_plugins_class_names(is_multi_node_supported=False):
                 "GlocksInSnapshots",
                 "GlocksWaitersTime",
                 "Pids",
-                "GlocksDependencies",
-                "GlocksHung"]
+                "GlocksDependencies"]
 
 def __get_plugins(snapshots, path_to_output_dir, options, enabled_plugins, is_multi_node_supported=False):
     classes = __get_plugins_class_names(is_multi_node_supported)

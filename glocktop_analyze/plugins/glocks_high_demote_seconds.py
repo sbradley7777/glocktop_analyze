@@ -14,7 +14,7 @@ import os.path
 import glocktop_analyze
 from glocktop_analyze.plugins import Plugin, Admonition
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
-from glocktop_analyze.html import generate_table_header, generate_table
+from glocktop_analyze.html import generate_css_header, generate_table
 from glocktop_analyze.html import generate_footer
 
 class GlocksHighDemoteSeconds(Plugin):
@@ -108,7 +108,7 @@ class GlocksHighDemoteSeconds(Plugin):
                                        ["Filesystem", "Glock", "Demote Seconds"],
                                        title=self.get_title(),
                                        description="Glocks that took longer than 0 seconds to demote a glock")
-                wdata = "%s\n%s\n%s" %(generate_table_header(), bdata, generate_footer())
+                wdata = "%s\n%s\n%s" %(generate_css_header(include_css_table=True), bdata, generate_footer())
             if (wdata):
                 if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
                     message = "An error occurred writing to the file: %s" %(path_to_output_file)

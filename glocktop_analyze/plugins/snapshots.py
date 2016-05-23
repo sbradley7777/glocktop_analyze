@@ -18,7 +18,7 @@ import os.path
 import glocktop_analyze
 from glocktop_analyze.plugins import Plugin
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
-from glocktop_analyze.html import generate_table_header, generate_table
+from glocktop_analyze.html import generate_css_header, generate_table
 from glocktop_analyze.html import generate_footer
 
 class Snapshots(Plugin):
@@ -89,7 +89,7 @@ class Snapshots(Plugin):
                                         title="DLM Waiter Count",
                                         description="The number of DLM waiters for a snapshot. Only snapshots with DLM waiter count higher than 0 displayed.")
             if (bdata):
-                wdata = "%s\n%s\n%s" %(generate_table_header(), bdata, generate_footer())
+                wdata = "%s\n%s\n%s" %(generate_css_header(include_css_table=True), bdata, generate_footer())
                 filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                             self.get_filesystem_name()), filename)

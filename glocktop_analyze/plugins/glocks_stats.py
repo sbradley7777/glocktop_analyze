@@ -17,7 +17,7 @@ from glocktop_analyze.plugins import generate_date_graphs
 from glocktop_analyze.glocks_stats import GlocksStats, GlockStat, GLOCK_TYPES
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
 from glocktop_analyze.html import generate_graph_index_page
-from glocktop_analyze.html import generate_table_header, generate_table
+from glocktop_analyze.html import generate_css_header, generate_table
 from glocktop_analyze.html import generate_footer
 
 class GSStats(Plugin):
@@ -134,7 +134,7 @@ class GSStats(Plugin):
                                         title=title,
                                         description="")
             if (bdata):
-                wdata = "%s\n%s\n%s" %(generate_table_header(), bdata, generate_footer())
+                wdata = "%s\n%s\n%s" %(generate_css_header(include_css_table=True), bdata, generate_footer())
 
         if (wdata):
             path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),

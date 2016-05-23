@@ -23,7 +23,7 @@ from collections import OrderedDict
 import glocktop_analyze
 from glocktop_analyze.plugins import Plugin
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize, tableify
-from glocktop_analyze.html import generate_table_header, generate_table
+from glocktop_analyze.html import generate_css_header, generate_table
 from glocktop_analyze.html import generate_footer
 
 class Pids(Plugin):
@@ -144,7 +144,7 @@ class Pids(Plugin):
                                         title="Pids that Appeared in Multiple Glocks.",
                                         description="The pids that appeared in multiple glocks.")
             if (bdata):
-                wdata = "%s\n%s\n%s" %(generate_table_header(), bdata, generate_footer())
+                wdata = "%s\n%s\n%s" %(generate_css_header(include_css_table=True), bdata, generate_footer())
                 filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                                     self.get_filesystem_name()), filename)

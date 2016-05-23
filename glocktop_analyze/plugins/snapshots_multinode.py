@@ -18,8 +18,6 @@ import os.path
 import glocktop_analyze
 from glocktop_analyze.plugins import PluginMultinode
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
-from glocktop_analyze.html import generate_table_header, generate_table
-from glocktop_analyze.html import generate_footer
 
 class SnapshotsMultiplyNodes(PluginMultinode):
     def __init__(self, snapshots, path_to_output_dir, options):
