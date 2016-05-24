@@ -76,7 +76,7 @@ class PidGlocks:
         self.__glocks.append(glock)
 
 class GlocksDependencies(Plugin):
-    OPTIONS = []
+    OPTIONS = [("minimum_glock_seq", "The minimum number of sequential snapshots to flag glock as a pattern.", 2)]
 
     def __init__(self, snapshots, path_to_output_dir, options):
         Plugin.__init__(self, "glocks_dependencies",
@@ -167,39 +167,46 @@ class GlocksDependencies(Plugin):
             summary = "%s%s" %(header, summary)
         return summary
 
+    def __get_pidglocks(self, snapshot):
+        map_of_pidglocks = {}
+        pids_with_holder_flag = []
+        # Sort all the pids associated with a glock into bins.
+        for glock in snapshot.get_glocks():
+            for glock_holder in glock.get_holders():
+                hashkey = self.__encode(glock_holder.get_pid(), glock_holder.get_command())
+                if (not map_of_pidglocks.has_key(hashkey)):
+                    map_of_pidglocks[hashkey] = PidGlocks(glock_holder.get_pid(),
+                                                          glock_holder.get_command())
+                map_of_pidglocks[hashkey].add_glock(glock)
+                if (not glock.get_glock_holder() == None):
+                    # Add all the glocks that have has holder flag set. Do this
+                    # now, so I do not need to go through list a second time.
+                    if (not hashkey in pids_with_holder_flag):
+                        pids_with_holder_flag.append(hashkey)
+        # Add all the flagged pids that had a glock with a holder ("h") flag
+        # to container for this snapshot.
+        list_of_pidglocks = []
+        for k in pids_with_holder_flag:
+            if (map_of_pidglocks.has_key(k)):
+                # Just get the ones where pid is using 2 or more glocks.
+                if (len(map_of_pidglocks.get(k).get_glocks()) > 1):
+                    list_of_pidglocks.append(map_of_pidglocks.get(k))
+        return PidGlocksInSnapshot(list_of_pidglocks, snapshot.get_hostname(),
+                                   snapshot.get_filesystem_name(),
+                                   snapshot.get_date_time())
+
     def analyze(self):
         for snapshot in self.get_snapshots():
-            map_of_pidglocks = {}
-            pids_with_holder_flag = []
-            for glock in snapshot.get_glocks():
-                for glock_holder in glock.get_holders():
-                    hashkey = self.__encode(glock_holder.get_pid(), glock_holder.get_command())
-                    if (not map_of_pidglocks.has_key(hashkey)):
-                        map_of_pidglocks[hashkey] = PidGlocks(glock_holder.get_pid(),
-                                                              glock_holder.get_command())
-                    map_of_pidglocks[hashkey].add_glock(glock)
-                    if (not glock.get_glock_holder() == None):
-                        if (not hashkey in pids_with_holder_flag):
-                            pids_with_holder_flag.append(hashkey)
-            # Add all the flagged pids that had a glock with a holder ("h") flag
-            # to container for this snapshot.
-            list_of_pidglocks = []
-            for k in pids_with_holder_flag:
-                if (map_of_pidglocks.has_key(k)):
-                    # Just get the ones where pid is using 2 or more glocks.
-                    if (len(map_of_pidglocks.get(k).get_glocks()) > 1):
-                        list_of_pidglocks.append(map_of_pidglocks.get(k))
-            # Add to map that sorted into filesystem bin.
-            if (list_of_pidglocks):
-                filesystem_name = snapshot.get_filesystem_name()
-                pidglocks_in_snapshot = PidGlocksInSnapshot(list_of_pidglocks, snapshot.get_hostname(),
-                                                            filesystem_name, snapshot.get_date_time())
+            pidglocks_in_snapshot = self.__get_pidglocks(snapshot)
+            if (pidglocks_in_snapshot.get_pidglocks()):
                 self.__glocks_dependencies_snapshots.append(pidglocks_in_snapshot)
 
         if (self.__glocks_dependencies_snapshots):
             warning_msg =  "Possible lock contention found on filesystem."
             self.add_warning(Admonition(snapshot.get_hostname(), self.get_filesystem_name(),
                                         "Glocks", warning_msg, ""))
+
+
 
     def console(self):
         summary = self.__get_text(colorize=True)
