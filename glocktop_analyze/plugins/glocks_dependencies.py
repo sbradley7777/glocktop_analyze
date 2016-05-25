@@ -76,7 +76,8 @@ class PidGlocks:
         self.__glocks.append(glock)
 
 class GlocksDependencies(Plugin):
-    OPTIONS = [("minimum_glock_seq", "The minimum number of sequential snapshots to flag glock as a pattern.", 2)]
+    OPTIONS = [("minimum_glock_seq", "The minimum number of sequential snapshots to flag glock as a pattern.", 3),
+               ("minimum_glocks_dep", "The minimum number of dependencies for a glock.", 1)]
 
     def __init__(self, snapshots, path_to_output_dir, options):
         Plugin.__init__(self, "glocks_dependencies",
@@ -84,6 +85,8 @@ class GlocksDependencies(Plugin):
                         snapshots, "Glocks Dependencies", path_to_output_dir,
                         options)
         self.__glocks_dependencies_snapshots = []
+        # Set minimum glocks dependency and add the glock itself with plus 1.
+        self.__minimum_glocks_dep = self.get_option("minimum_glocks_dep") + 1
 
     def __encode(self, pid, command):
         # Not sure what guranteees no duplicates, that command will not be empty
@@ -103,23 +106,24 @@ class GlocksDependencies(Plugin):
             for pidglocks in pidglocks_in_snapshot.get_pidglocks():
                 pid_summary = ""
                 glock_holder_flag_found = 0
-                for glock in pidglocks.get_glocks():
-                    pid_summary += "    %s\n" %(glock)
-                    for h in glock.get_holders():
-                        pid_summary += "      %s\n" %(h)
-                    glock_object = glock.get_glock_object()
-                    if (not glock_object == None):
-                        pid_summary += "      %s\n" %(glock_object)
-                    if (not glock.get_glock_holder() == None):
-                        glock_holder_flag_found += 1
-
-                if (pid_summary):
-                    pid_header =  "  pid: %s command: %s | " %(pidglocks.get_pid(), pidglocks.get_command())
-                    pid_header += "%d glocks associated with pid " %(len(pidglocks.get_glocks()))
-                    pid_header += "(%d glock holders)\n" %(glock_holder_flag_found)
-                    if (colorize):
-                        pid_header = ColorizeConsoleText.orange(pid_header)
-                    snapshot_summary += "%s%s\n" %(pid_header, pid_summary)
+                glocks = pidglocks.get_glocks()
+                if (len(glocks) >= self.__minimum_glocks_dep):
+                    for glock in glocks:
+                        pid_summary += "    %s\n" %(glock)
+                        for h in glock.get_holders():
+                            pid_summary += "      %s\n" %(h)
+                        glock_object = glock.get_glock_object()
+                        if (not glock_object == None):
+                            pid_summary += "      %s\n" %(glock_object)
+                        if (not glock.get_glock_holder() == None):
+                            glock_holder_flag_found += 1
+                    if (pid_summary):
+                        pid_header =  "  pid: %s command: %s | " %(pidglocks.get_pid(), pidglocks.get_command())
+                        pid_header += "%d glocks associated with pid " %(len(pidglocks.get_glocks()))
+                        pid_header += "(%d glock holders)\n" %(glock_holder_flag_found)
+                        if (colorize):
+                            pid_header = ColorizeConsoleText.orange(pid_header)
+                        snapshot_summary += "%s%s\n" %(pid_header, pid_summary)
             if (snapshot_summary):
                 snapshot_header = "%s - %s @%s" %(pidglocks_in_snapshot.get_filesystem_name(),
                                                   pidglocks_in_snapshot.get_date_time(),
@@ -139,16 +143,17 @@ class GlocksDependencies(Plugin):
             for pidglocks in pidglocks_in_snapshot.get_pidglocks():
                 pid_summary = ""
                 glock_holder_flag_found = 0
-                for glock in pidglocks.get_glocks():
-                    pid_summary += "<b>&nbsp;&nbsp;%s</b><BR/>" %(glock)
-                    for h in glock.get_holders():
-                        pid_summary += "&nbsp;&nbsp;&nbsp;&nbsp;%s<BR/>" %(h)
-                    glock_object = glock.get_glock_object()
-                    if (not glock_object == None):
-                        pid_summary += "&nbsp;&nbsp;&nbsp;&nbsp;%s<BR/>" %(glock_object)
-                    if (not glock.get_glock_holder() == None):
-                        glock_holder_flag_found += 1
-
+                glocks = pidglocks.get_glocks()
+                if (len(glocks) >= self.__minimum_glocks_dep):
+                    for glock in glocks:
+                        pid_summary += "<b>&nbsp;&nbsp;%s</b><BR/>" %(glock)
+                        for h in glock.get_holders():
+                            pid_summary += "&nbsp;&nbsp;&nbsp;&nbsp;%s<BR/>" %(h)
+                        glock_object = glock.get_glock_object()
+                        if (not glock_object == None):
+                            pid_summary += "&nbsp;&nbsp;&nbsp;&nbsp;%s<BR/>" %(glock_object)
+                        if (not glock.get_glock_holder() == None):
+                            glock_holder_flag_found += 1
                 if (pid_summary):
                     pid_header =  "<span class=\"orange\">&nbsp;&nbsp;pid: %s command: %s | " %(pidglocks.get_pid(), pidglocks.get_command())
                     pid_header += "%d glocks associated with pid " %(len(pidglocks.get_glocks()))
@@ -188,12 +193,50 @@ class GlocksDependencies(Plugin):
         list_of_pidglocks = []
         for k in pids_with_holder_flag:
             if (map_of_pidglocks.has_key(k)):
-                # Just get the ones where pid is using 2 or more glocks.
-                if (len(map_of_pidglocks.get(k).get_glocks()) > 1):
-                    list_of_pidglocks.append(map_of_pidglocks.get(k))
+                list_of_pidglocks.append(map_of_pidglocks.get(k))
         return PidGlocksInSnapshot(list_of_pidglocks, snapshot.get_hostname(),
                                    snapshot.get_filesystem_name(),
                                    snapshot.get_date_time())
+
+    def __find_glock_seq(self):
+        def encode(pid, gtype, ginode):
+            return "%s-%s/%s" %(pid, gtype, ginode)
+        # Create a mapping of snapshot date_time and sequence it came in. This
+        # container will contain a key for date/time and value will be snapshot
+        # count when snapshot taken.
+        snapshots_date_time = {}
+        index = 1
+        # Find the glock with holder flag set and same glock type/name and pid.
+        gh_pid = {}
+        for snapshot in self.get_snapshots():
+            snapshots_date_time[snapshot.get_date_time()] = index
+            index += 1
+            for glock in snapshot.get_glocks():
+                gh = glock.get_glock_holder()
+                if (not gh == None):
+                    hashkey = encode(gh.get_pid(), glock.get_type(), glock.get_inode())
+                    if (not gh_pid.has_key(hashkey)):
+                        gh_pid[hashkey] = []
+                    gh_pid[hashkey].append(snapshot.get_date_time())
+
+        # Function that will return True if sequence found that meets minimum
+        # numbers of integers in list to qualify as a sequence.
+        def is_sequence(seq, minimum_sequence_size):
+            # If the lists are equal then sequence of numbers.
+            if (len(seq) >= minimum_sequence_size):
+                return seq == range(seq[0], seq[-1]+1)
+            return False
+
+        gh_pid_sequence = []
+        for key in gh_pid.keys():
+            gh_date_times = gh_pid.get(key)
+            indexes = []
+            for date_time in gh_date_times:
+                if (snapshots_date_time.has_key(date_time)):
+                    indexes.append(snapshots_date_time.get(date_time))
+                    if (is_sequence(indexes, self.get_option("minimum_glock_seq"))):
+                        gh_pid_sequence.append(key)
+        return gh_pid_sequence
 
     def analyze(self):
         for snapshot in self.get_snapshots():
@@ -202,11 +245,25 @@ class GlocksDependencies(Plugin):
                 self.__glocks_dependencies_snapshots.append(pidglocks_in_snapshot)
 
         if (self.__glocks_dependencies_snapshots):
-            warning_msg =  "Possible lock contention found on filesystem."
+            warning_msg = "Possible lock contention detected on filesystem. Check the glock dependency output."
             self.add_warning(Admonition(snapshot.get_hostname(), self.get_filesystem_name(),
                                         "Glocks", warning_msg, ""))
+        # Find glocks that have appeared in sequential snapshots.
+        glocks_holders_in_sequence = self.__find_glock_seq()
+        if (glocks_holders_in_sequence):
+            def decode(s):
+                ssplit = s.split("-")
+                pid = ssplit[0]
+                gtype = ssplit[1].split("/")[0]
+                ginode = ssplit[1].split("/")[1]
+                return (pid, gtype, ginode)
 
-
+            for g in glocks_holders_in_sequence:
+                pid, gtype, ginode = decode(g)
+                warning_msg =  "The glock \"%s/%s\" used by pid \"%s\" had the holder flag set " %(gtype, ginode, pid)
+                warning_msg += "in %d+ sequential snapshots. Possible performance degradation or hung detected." %(self.get_option("minimum_glock_seq"))
+                self.add_warning(Admonition(snapshot.get_hostname(), self.get_filesystem_name(),
+                                            "Glocks", warning_msg, ""))
 
     def console(self):
         summary = self.__get_text(colorize=True)
