@@ -17,6 +17,7 @@ import locale
 from copy import deepcopy
 import copy
 locale.setlocale(locale.LC_NUMERIC, "")
+import textwrap
 
 import glocktop_analyze
 
@@ -255,30 +256,53 @@ def merge_dicts(dict_org, dict_to_merge):
                 value_org.append(value)
     return dict_org
 
-def tableify(row, max_last_element_strings=5):
-    """
-    When the last element of a list has multiple space seperate values then return
-    mutliple lists so the last element does offset the table.
-    Returns a list of lists.
-    """
-    current_row = copy.copy(row)
-    last_element = current_row.pop()
-    table = []
-    index = 0
-    clast_element = ""
-    for s in last_element.split():
-        if (((index % max_last_element_strings) == 0) and (not index == 0)):
-            table.append(current_row + [clast_element.strip()])
-            clast_element = s
-            index = 0
-            current_row = ["-"] * len(current_row)
-        else:
-            clast_element += " %s" %(str(s))
-            index += 1
-    if (last_element):
-        table.append(current_row + [clast_element.strip()])
-    return table
+def truncate_rows(rows, max_item_length=70):
+    # This function will take a list of lists and remove any whitespaces at
+    # start or end of items in each list. It will also truncate any item that is
+    # longer than max_item_length and will insert into new rows the text longer
+    # than max_item_length.
 
+    # Strip out any white spaces when copying the list into a new list.
+    rows_copy = []
+    for row in rows:
+        new_row = []
+        for i in row:
+            try:
+                new_row.append(i.strip())
+            except AttributeError:
+                new_row.append(i)
+        rows_copy.append(new_row)
+    rindex = 0
+    for row in rows_copy:
+        iindex = 0;
+        index_with_long_lines = {}
+        for item in row:
+            if (len(str(item)) > max_item_length):
+                index_with_long_lines[iindex] = textwrap.wrap(str(item), max_item_length, break_long_words=False)
+            iindex += 1
+        for key in index_with_long_lines:
+            # Modify the current and change to the shorten version.
+            row[key] = index_with_long_lines.get(key).pop(0)
+        # Look over what is left and add new row. Could have multiple items in
+        # new row.
+        insert_after_row = rindex + 1
+        while (index_with_long_lines):
+            new_row = ["-"] * (len(row))
+            for key in index_with_long_lines.keys():
+                # If there is item in list then add to new row.
+                # if the list is empty then remove they key.
+                items = index_with_long_lines.get(key)
+                if (items):
+                    new_row[key] = index_with_long_lines.get(key).pop(0)
+                    if (not items):
+                        # Delete the key if nothing is in list.
+                        del index_with_long_lines[key]
+            if (new_row):
+                rows_copy.insert(insert_after_row, new_row)
+                insert_after_row += 1
+        # Increment the row index
+        rindex += 1
+    return rows_copy
 
 def tableize(rows, header, colorize=True):
     """
@@ -286,12 +310,14 @@ def tableize(rows, header, colorize=True):
     sequence of sequences with the 0th element being the header.
     https://gist.github.com/lonetwin/4721748
     """
-    # Make a copy of the data
-    rows_copy = deepcopy(rows)
+    # Formatted string of table data returned.
     formatted_table = ""
-    if (not rows_copy):
+    if (not rows):
         return formatted_table
 
+    # Truncate any data in columns.
+    rows_copy = truncate_rows(rows)
+    # Insert the header
     rows_copy.insert(0, header)
     def __format_item(item):
         import locale

@@ -22,7 +22,7 @@ from collections import OrderedDict
 
 import glocktop_analyze
 from glocktop_analyze.plugins import Plugin
-from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize, tableify
+from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
 from glocktop_analyze.html import generate_css_header, generate_table
 from glocktop_analyze.html import generate_footer
 
@@ -69,11 +69,8 @@ class Pids(Plugin):
                                             "Number of Snapshots Appeared in"], colorize).strip())
 
         if (self.__pids_using_multiple_glocks):
-            ftable = []
-            for row in self.__pids_using_multiple_glocks:
-                ftable += tableify(row)
             summary += "The glocks the pids appears in queue as holder or waiter.\n"
-            summary += "%s\n\n" %(tableize(ftable,
+            summary += "%s\n\n" %(tableize(self.__pids_using_multiple_glocks,
                                            ["Filesystem", "Pid", "Command",
                                             "Number of Glocks Appeared in",
                                             "Glock Type/Inode"], colorize).strip())

@@ -33,28 +33,11 @@ class GlocksHighDemoteSeconds(Plugin):
         hashkey_split = hashkey.split("/")
         return (hashkey_split[0], hashkey_split[1])
 
-    def __tableify(self, glock_type_name, demote_seconds):
-        table = []
-        current_filesystem_name = self.get_filesystem_name()
-        current_glock = glock_type_name
-        current_demote_seconds = ""
-        index = 0
-        for dss in demote_seconds.split():
-            if (((index % 5) == 0) and (not index == 0)):
-                table.append([current_filesystem_name, current_glock, current_demote_seconds.strip()])
-                current_filesystem_name = "-"
-                current_glock = "-"
-                current_demote_seconds = dss
-                index = 0
-            else:
-                current_demote_seconds += " %s" %(dss)
-                index += 1
-        return table
 
     def __get_text(self, colorize=False):
         table = []
         for hashkey in self.__glocks_high_demote_seconds.keys():
-            table += self.__tableify(hashkey, self.__glocks_high_demote_seconds.get(hashkey))
+            table.append([self.get_filesystem_name(), hashkey, self.__glocks_high_demote_seconds.get(hashkey).strip()])
         if (table):
             return "%s: %s\n\n%s\n%s\n" %(self.get_title(), self.get_description(),
                                           "Glocks with demoting of a glocks taking greater than 0 seconds to complete.",
@@ -103,7 +86,7 @@ class GlocksHighDemoteSeconds(Plugin):
                                                                 self.get_filesystem_name()), filename)
                 table = []
                 for hashkey in self.__glocks_high_demote_seconds.keys():
-                    table += self.__tableify(hashkey, self.__glocks_high_demote_seconds.get(hashkey))
+                    table.append([self.get_filesystem_name(), hashkey, self.__glocks_high_demote_seconds.get(hashkey).strip()])
                 bdata = generate_table(table,
                                        ["Filesystem", "Glock", "Demote Seconds"],
                                        title=self.get_title(),
