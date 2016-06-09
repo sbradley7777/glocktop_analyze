@@ -12,6 +12,7 @@ Options for the plugin:
 import logging
 import logging.handlers
 import os.path
+import re
 
 import glocktop_analyze
 from glocktop_analyze.plugins import Plugin, Admonition
@@ -199,8 +200,8 @@ class GlocksDependencies(Plugin):
                                    snapshot.get_date_time())
 
     def __find_glock_seq(self):
-        def encode(pid, gtype, ginode):
-            return "%s-%s/%s" %(pid, gtype, ginode)
+        def encode(pid, command, gtype, ginode):
+            return "%s-%s (%s/%s)" %(pid, command, gtype, ginode)
         # Create a mapping of snapshot date_time and sequence it came in. This
         # container will contain a key for date/time and value will be snapshot
         # count when snapshot taken.
@@ -214,7 +215,7 @@ class GlocksDependencies(Plugin):
             for glock in snapshot.get_glocks():
                 gh = glock.get_glock_holder()
                 if (not gh == None):
-                    hashkey = encode(gh.get_pid(), glock.get_type(), glock.get_inode())
+                    hashkey = encode(gh.get_pid(), gh.get_command(), glock.get_type(), glock.get_inode())
                     if (not gh_pid.has_key(hashkey)):
                         gh_pid[hashkey] = []
                     gh_pid[hashkey].append(snapshot.get_date_time())
@@ -244,26 +245,41 @@ class GlocksDependencies(Plugin):
             if (pidglocks_in_snapshot.get_pidglocks()):
                 self.__glocks_dependencies_snapshots.append(pidglocks_in_snapshot)
 
-        if (self.__glocks_dependencies_snapshots):
-            warning_msg = "Possible lock contention detected on filesystem. Check the glock dependency output."
-            self.add_warning(Admonition(snapshot.get_hostname(), self.get_filesystem_name(),
-                                        "Glocks", warning_msg, ""))
-        # Find glocks that have appeared in sequential snapshots.
+        for pidglocks_in_snapshot in self.__glocks_dependencies_snapshots:
+            # If more than one glock attached to pid then flag.
+            for pidglocks in pidglocks_in_snapshot.get_pidglocks():
+                glocks = pidglocks.get_glocks()
+                if (len(glocks) >= self.__minimum_glocks_dep):
+                    warning_msg =  "Possible lock contention detected on filesystem. "
+                    warning_msg += "Check the glock dependency output for pid \"%s\"." %(pidglocks.get_pid())
+                    self.add_warning(Admonition(snapshot.get_hostname(), self.get_filesystem_name(),
+                                                "Glocks", warning_msg, ""))
+        # Find glocks that have appeared in sequential snapshots. This is
+        # related to issue where inode is looking for resource group and cannot
+        # find one because they are harder and harder to find.
+
+        # At the moment I am not looking for this sequence, but any
+        # sequence. This needs to be defined better for this one particular case
+        # and the general case of lock sequential showing up.
+        # https://access.redhat.com/solutions/315953
         glocks_holders_in_sequence = self.__find_glock_seq()
         if (glocks_holders_in_sequence):
             def decode(s):
-                ssplit = s.split("-")
-                pid = ssplit[0]
-                gtype = ssplit[1].split("/")[0]
-                ginode = ssplit[1].split("/")[1]
-                return (pid, gtype, ginode)
+                regex = re.compile("(?P<pid>\d+)-(?P<command>.*)\((?P<gtype>\d).(?P<ginode>.*)\)")
+                mo = regex.match(s.strip())
+                if (mo):
+                    return mo.group("pid"), mo.group("command"), mo.group("gtype"), mo.group("ginode")
+                return ("", "", "", "")
 
             for g in glocks_holders_in_sequence:
-                pid, gtype, ginode = decode(g)
-                warning_msg =  "The glock \"%s/%s\" used by pid \"%s\" had the holder flag set " %(gtype, ginode, pid)
-                warning_msg += "in %d+ sequential snapshots. Possible performance degradation or hung detected." %(self.get_option("minimum_glock_seq"))
-                self.add_warning(Admonition(snapshot.get_hostname(), self.get_filesystem_name(),
-                                            "Glocks", warning_msg, ""))
+                pid, command, gtype, ginode = decode(g)
+                if (pid):
+                    warning_msg =  "The glock \"%s/%s\" used by pid \"%s\" had the holder flag set " %(gtype, ginode, pid)
+                    warning_msg += "in %d+ sequential snapshots. " %(self.get_option("minimum_glock_seq"))
+                    warning_msg += "Possible performance degradation or hung detected. "
+                    warning_msg += "One possible cause is filesystem has used more than 80% of free space."
+                    self.add_warning(Admonition(snapshot.get_hostname(), self.get_filesystem_name(),
+                                                "Glocks", warning_msg, https://access.redhat.com/solutions/315953))
 
     def console(self):
         summary = self.__get_text(colorize=True)
@@ -278,7 +294,6 @@ class GlocksDependencies(Plugin):
             filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
             path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                             self.get_filesystem_name()), filename)
-
         else:
             bdata = self.__get_html(colorize=True)
             wdata = "%s\n%s\n<BR/><HR/><BR/>%s" %(generate_css_header(), bdata, generate_footer())
