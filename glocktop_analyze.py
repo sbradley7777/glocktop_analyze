@@ -29,7 +29,8 @@ import logging
 import logging.handlers
 import os
 import os.path
-from optparse import OptionParser, Option, SUPPRESS_HELP
+import copy
+import argparse
 
 import glocktop_analyze
 from glocktop_analyze.utilities import LogWriter
@@ -200,7 +201,7 @@ def __plugins_run(snapshots, path_to_output_dir,
     for plugin in plugins:
         plugin.analyze()
         plugin.write(html_format=enable_html_format)
-        if (not cmdline_opts.disable_std_out):
+        if (not parseargs_ns.disable_std_out):
             plugin.console()
         if (enable_graphs):
             plugin.graph(enable_png_format)
@@ -276,163 +277,145 @@ def __get_plugin_options(user_options):
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
     return options
 
-def __get_cmdline_options(cmd_parser) :
-    cmd_parser.add_option("-d", "--debug",
-                          action="store_true",
-                          dest="enableDebugLogging",
-                          help="enables debug logging",
-                          default=False)
-    cmd_parser.add_option("-q", "--quiet",
-                          action="store_true",
-                          dest="disable_std_out",
-                          help="disables logging to console",
-                          default=False)
-    cmd_parser.add_option("-l", "--show_plugins_list",
-                          action="store_true",
-                          dest="show_plugins_list",
-                          help="show all available plugins and plugin options",
-                          default=False)
-    cmd_parser.add_option("-p", "--path_to_filename",
-                          action="extend",
-                          dest="path_to_src_file",
-                          help="the path to the filename that will be parsed or directory containing glocktop files",
-                          type="string",
-                          metavar="<input filename>",
-                          default=[])
-    cmd_parser.add_option("-o", "--path_to_output_dir",
-                          action="store",
-                          dest="path_to_output_dir",
-                          help="the path to the directory where any files generated will be outputted",
-                          type="string",
-                          metavar="<input filename>",
-                          default="/tmp/%s" %(cmd_parser.get_command_name().split(".")[0]))
-    cmd_parser.add_option("-n", "--gfs2_filesystem_name",
-                          action="extend",
-                          dest="gfs2_filesystem_names",
-                          help="only analyze a particular gfs2 filesystem",
-                          type="string",
-                          metavar="<gfs2 filesystem name>",
-                          default=[])
-    cmd_parser.add_option("-e", "--enable_plugins",
-                          action="extend",
-                          dest="plugins_to_enable",
-                          help="plugins to only enable and run against the data",
-                          type="string",
-                          metavar="<plugin name>",
-                          default=[])
-    cmd_parser.add_option("-k", "--plugins_option",
-                          action="extend",
-                          dest="plugins_options",
-                          help="a plugins option and value.",
-                          type="string",
-                          metavar="<option_name=value>",
-                          default=[])
-    cmd_parser.add_option("-A", "--disable_group_analysis",
-                          action="store_false",
-                          dest="enable_group_analysis",
-                          help="disable group filesystem analysis of all files found",
-                          default=True)
-    cmd_parser.add_option("-I", "--show_ended_process_and_tlocks",
-                          action="store_true",
-                          dest="show_ended_process_and_tlocks",
-                          help="show all glocks for ended process and transaction locks",
-                          default=False)
-    cmd_parser.add_option("-T", "--disable_html_format",
-                          action="store_false",
-                          dest="enable_html_format",
-                          help="disable outputting to html format (and disable graphs)",
-                          default=True)
+
+# ##############################################################################
+# parseargs helpers
+# ##############################################################################
+class AbsolutePathAction(argparse._AppendAction):
+    def __call__(self, parser, namespace, values, option_string=None):
+        path_to_filename = os.path.abspath(os.path.expanduser(values))
+        setattr(namespace, self.dest, path_to_filename)
+
+class AbsolutePathActionAppend(argparse._AppendAction):
+    # Append path to files that exists to single list.
+    def __call__(self, parser, namespace, values, option_string=None):
+        items = copy.copy(argparse._ensure_value(namespace, self.dest, []))
+        items = [os.path.abspath(os.path.expanduser(item)) for item in items]
+        valid_filenames = []
+        # Split commas and do not paths that are not valid.
+        for value in values.split(","):
+            # Do validation.
+            path_to_filename = os.path.abspath(os.path.expanduser(value))
+            if (os.path.exists(path_to_filename) and os.path.isfile(path_to_filename)):
+                valid_filenames.append(path_to_filename)
+        items += valid_filenames
+        setattr(namespace, self.dest, items)
+
+class ActionAppend(argparse._AppendAction):
+    # Append items to a single list.
+    def __call__(self, parser, namespace, values, option_string=None):
+        items = copy.copy(argparse._ensure_value(namespace, self.dest, []))
+        valid_items = []
+        for value in values.split(","):
+            # Do validation.
+            valid_items.append(value)
+        items += valid_items
+        setattr(namespace, self.dest, items)
+
+# ##############################################################################
+# Get user selected options
+# ##############################################################################
+def __get_args() :
+    description =  "This script analyzes the output generated by glocktop monitoring a  GFS2 filesystems. "
+    description += "The output is printed to console or to html format which can include graphs."
+    command_name = "glocktop_analyze.py"
+    epilog =  "Usage examples:\n"
+    epilog += "Analyze a directory containing glocktop files and output to a directory.\n"
+    epilog += "# %s -p /tmp/glocktop_files/ -o /var/www/html/glocktop_data \n\n" %(command_name)
+    epilog += "Analyze a single file and configure some of the plugins options.\n"
+    epilog += "# %s -p /tmp/glocktop_files/glocktop.node1 " %(command_name)
+    epilog += "-k glocks_activity.mininum_waiter_count=7 -k glocks_in_snapshots.mininum_glocks_in_snapshots=11 \n\n"
+    epilog += "Analyze a single file and disable html format and show ended processes.\n"
+    epilog += "# %s -p /tmp/glocktop_files/glocktop.node1 -T -I \n\n" %(command_name)
+    epilog += "Analyze a particular filesystem only.\n"
+    epilog += "# %s -p /tmp/glocktop_files/glocktop.node1 -n mygfs2fs\n\n" %(command_name)
+    epilog += "Analyze a single file and enable only a specific set of plugins and disable html format.\n"
+    epilog += "# %s -p /tmp/glocktop_files/glocktop.node1  -e snapshots-multiply_nodes -e snapshots -T \n\n" %(command_name)
+
+    parser = argparse.ArgumentParser(description=description,
+                                     epilog=epilog,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    # Do not need to declare `type` for strings. All input is assumed to be
+    # string unless attribute `type` set.
+    parser.add_argument("-d", "--debug",
+                        action="store_true",
+                        dest="enable_debug",
+                        help="enables debug logging",
+                        default=False)
+    parser.add_argument("-q", "--quiet",
+                         action="store_true",
+                         dest="disable_std_out",
+                         help="disables logging to console",
+                         default=False)
+    parser.add_argument("-y", "--no_ask",
+                        action="store_true",
+                        dest="no_ask",
+                        help="disables all questions and assumes yes",
+                        default=False)
+    parser.add_argument("-l", "--show_plugins_list",
+                        action="store_true",
+                        dest="show_plugins_list",
+                        help="show all available plugins and plugin options",
+                        default=False)
+    parser.add_argument("-p", "--path_to_filename",
+                        action=AbsolutePathActionAppend,
+                        dest="path_to_src_file",
+                        help="the path to the filename that will be parsed",
+                        metavar="<input filename>",
+                        default="")
+    parser.add_argument("-o", "--path_to_output_filename",
+                        action=AbsolutePathAction,
+                        dest="path_to_dst_dir",
+                        help="the path to the output filename",
+                        metavar="<output filename>",
+                        default="")
+    parser.add_argument("-e", "--enable_plugins",
+                        action=ActionAppend,
+                        dest="plugins_to_enable",
+                        help="plugins to only enable and run against the data",
+                        metavar="<plugin name>",
+                        default=[])
+    parser.add_argument("-k", "--plugins_option",
+                        action=ActionAppend,
+                        dest="plugins_options",
+                        help="a plugins option and value.",
+                        metavar="<option_name=value>",
+                        default=[])
+    parser.add_argument("-n", "--gfs2_filesystem_name",
+                        action=ActionAppend,
+                        dest="gfs2_filesystem_names",
+                        help="only analyze a particular gfs2 filesystem",
+                        metavar="<gfs2 filesystem name>",
+                        default=[])
+    parser.add_argument("-A", "--disable_group_analysis",
+                        action="store_false",
+                        dest="enable_group_analysis",
+                        help="disable group filesystem analysis of all files found",
+                        default=True)
+    parser.add_argument("-I", "--show_ended_process_and_tlocks",
+                        action="store_true",
+                        dest="show_ended_process_and_tlocks",
+                        help="show all glocks for ended process and transaction locks",
+                        default=False)
+    parser.add_argument("-T", "--disable_html_format",
+                        action="store_false",
+                        dest="enable_html_format",
+                        help="disable outputting to html format (and disable graphs)",
+                        default=True)
     try:
         import pkgutil
         if (not pkgutil.find_loader("pygal") == None):
             # If pygal is not installed then this option will not be found.
-            cmd_parser.add_option("-G", "--disable_graphs",
-                                  action="store_false",
-                                  dest="enable_graphs",
-                                  help="do not generate graphs of stats",
-                                  default=True)
+            parser.add_argument("-G", "--disable_graphs",
+                                action="store_false",
+                                dest="enable_graphs",
+                                help="do not generate graphs of stats",
+                                default=True)
     except (ImportError, NameError):
         message = "Failed to find pygal. The python-pygal package needs to be installed."
         logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
+    return parser.parse_args()
 
-    (cmdLine_opts, cmdLine_args) = cmd_parser.parse_args()
-    return (cmdLine_opts, cmdLine_args)
-
-# ##############################################################################
-# OptParse classes for commandline options
-# ##############################################################################
-class OptionParserExtended(OptionParser):
-    def __init__(self, version) :
-        self.__command_name = os.path.basename(sys.argv[0])
-        description =  "This script analyzes the output generated by glocktop monitoring a  GFS2 filesystems. "
-        description += "The output is printed to console or to html format which can include graphs."
-
-        OptionParser.__init__(self, option_class=ExtendOption,
-                              version="%s %s\n" %(self.__command_name, version),
-                              description="%s \n"%(description))
-
-    def get_command_name(self):
-        return self.__command_name
-
-    def print_help(self):
-        self.print_version()
-        examples_message = "\n\n"
-        OptionParser.print_help(self)
-
-        examples_message += "Analyze a directory containing glocktop files and output to a directory.\n"
-        examples_message += "# %s -p /tmp/glocktop_files/ -o /var/www/html/glocktop_data \n\n" %(self.get_command_name())
-        examples_message += "Analyze a single file and configure some of the plugins options.\n"
-        examples_message += "# %s -p /tmp/glocktop_files/glocktop.node1 " %(self.get_command_name())
-        examples_message += "-k glocks_activity.mininum_waiter_count=7 -k glocks_in_snapshots.mininum_glocks_in_snapshots=11 \n\n"
-        examples_message += "Analyze a single file and disable html format and show ended processes.\n"
-        examples_message += "# %s -p /tmp/glocktop_files/glocktop.node1 -T -I \n\n" %(self.get_command_name())
-        examples_message += "Analyze a particular filesystem only.\n"
-        examples_message += "# %s -p /tmp/glocktop_files/glocktop.node1 -n mygfs2fs\n\n" %(self.get_command_name())
-        examples_message += "Analyze a single file and enable only a specific set of plugins and disable html format.\n"
-        examples_message += "# %s -p /tmp/glocktop_files/glocktop.node1  -e snapshots-multiply_nodes -e snapshots -T \n\n" %(self.get_command_name())
-        print examples_message
-
-class ExtendOption (Option):
-    ACTIONS = Option.ACTIONS + ("extend",)
-    STORE_ACTIONS = Option.STORE_ACTIONS + ("extend",)
-    TYPED_ACTIONS = Option.TYPED_ACTIONS + ("extend",)
-
-    def take_action(self, action, dest, opt, value, values, parser):
-        if (action == "extend") :
-            valueList=[]
-            try:
-                for v in value.split(","):
-                    if ((opt == "-p") or (opt == "--path_to_filename")):
-                        if (v[0] == '~' and not os.path.exists(v)):
-                            v = os.path.expanduser(v)
-                        elif (not v[0] == '/' and not os.path.exists(v)):
-                            v = os.path.abspath(v)
-                        # only append paths that exists.
-                        if (os.path.exists(v)) :
-                            valueList.append(v)
-                        else:
-                            message = "The filepath does not exist: %s" %(v)
-                            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
-                    elif ((opt == "-o") or (opt == "--plugins_option")):
-                        # Verify that is the format: key=value, where key is of format parent.optionname
-                        # Example: glocks_in_snapshots.mininum_glocks_in_snapshots=11
-                        keyEqualSplit = v.split("=")
-                        if (len(keyEqualSplit) == 2):
-                            valueList.append(v)
-                        else:
-                            message = "The plugin option has invalid syntax:" %(v)
-                            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).error(message)
-                    elif ((opt == "-e") or (opt == "--enable_plugin")):
-                            valueList.append(v)
-                    else:
-                        # append everything else that does not deal with paths
-                        valueList.append(v)
-            except:
-                pass
-            else:
-                values.ensure_value(dest, []).extend(valueList)
-        else:
-            Option.take_action(self, action, dest, opt, value, values, parser)
 
 # ###############################################################################
 # Main Function
@@ -442,19 +425,17 @@ if __name__ == "__main__":
         # #######################################################################
         # Get the options from the commandline.
         # #######################################################################
-        cmd_parser = OptionParserExtended(VERSION_NUMBER)
-        (cmdline_opts, cmdline_args) = __get_cmdline_options(cmd_parser)
+        parseargs_ns = __get_args()
 
         # #######################################################################
         # Set the logging levels.
         # #######################################################################
-        if ((cmdline_opts.enableDebugLogging) and (not cmdline_opts.disable_std_out)):
+        if (parseargs_ns.enable_debug and (not parseargs_ns.disable_std_out)):
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).setLevel(logging.DEBUG)
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug("Debugging has been enabled.")
 
         # List all the plugins found and their corresponding options.
-        if (cmdline_opts.show_plugins_list):
-            cmd_parser.print_version()
+        if (parseargs_ns.show_plugins_list):
             __print_plugins_description()
             sys.exit()
 
@@ -473,7 +454,7 @@ if __name__ == "__main__":
             return False
 
         path_to_filenames = []
-        for filename in cmdline_opts.path_to_src_file:
+        for filename in parseargs_ns.path_to_src_file:
             if (os.path.isfile(filename)):
                 if (is_valid_glocktop_file(filename)):
                     path_to_filenames.append(filename)
@@ -493,39 +474,40 @@ if __name__ == "__main__":
             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).info(message)
             sys.exit(1)
 
+        print path_to_filenames
+
         # #######################################################################
         # Get the values for the plugin options
         # #######################################################################
-        enable_html_format = cmdline_opts.enable_html_format
+        enable_html_format = parseargs_ns.enable_html_format
         # svg does better charts than png
         enable_png_format = False
         enable_graphs = False
         try:
             # If attribute does not exist because required library not installed
             # then siliently catch the exception.
-            enable_graphs = cmdline_opts.enable_graphs and enable_html_format
+            enable_graphs = parseargs_ns.enable_graphs and enable_html_format
         except AttributeError:
             pass
 
-        options = __get_plugin_options(cmdline_opts.plugins_options)
-
+        options = __get_plugin_options(parseargs_ns.plugins_options)
         # #######################################################################
         # Analyze the data if there are non-grouped plugins enabled
         # #######################################################################
-        if (__has_enabled_plugins(cmdline_opts.plugins_to_enable, False)):
+        if (__has_enabled_plugins(parseargs_ns.plugins_to_enable, False)):
             # Save any warning that are found when plugins are ran.
             warnings = []
             for path_to_filename in path_to_filenames:
                 message ="The file will be analyzed: %s" %(path_to_filename)
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
                 snapshots_by_filesystem = __analyze_file(path_to_filename,
-                                                         cmdline_opts.gfs2_filesystem_names,
-                                                         cmdline_opts.show_ended_process_and_tlocks)
+                                                         parseargs_ns.gfs2_filesystem_names,
+                                                         parseargs_ns.show_ended_process_and_tlocks)
                 # Set the path to output dir.
-                path_to_output_dir = ""
+                path_to_dst_dir = ""
                 if (snapshots_by_filesystem.keys()):
                     hostname = snapshots_by_filesystem[snapshots_by_filesystem.keys()[0]][0].get_hostname()
-                    path_to_output_dir = os.path.join(cmdline_opts.path_to_output_dir, hostname)
+                    path_to_dst_dir = os.path.join(parseargs_ns.path_to_dst_dir, hostname)
                 message ="The analyzing of the file is complete."
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
 
@@ -533,19 +515,19 @@ if __name__ == "__main__":
                 for filesystem_name in snapshots_by_filesystem.keys():
                     snapshots = snapshots_by_filesystem.get(filesystem_name)
                     # All the warnings found on the filesystem after plugins have ran.
-                    warnings += __plugins_run(snapshots, path_to_output_dir,
+                    warnings += __plugins_run(snapshots, path_to_dst_dir,
                                               enable_html_format, enable_png_format,
                                               enable_graphs,
-                                              cmdline_opts.plugins_to_enable)
+                                              parseargs_ns.plugins_to_enable)
             # Output or write any warnings found.
-            __output_warnings(warnings, path_to_output_dir,
-                              disable_std_out=cmdline_opts.disable_std_out,
+            __output_warnings(warnings, path_to_dst_dir,
+                              disable_std_out=parseargs_ns.disable_std_out,
                               html_format=enable_html_format)
 
         # #######################################################################
         # Analyze the data if there are grouped plugins enabled
         # #######################################################################
-        if (cmdline_opts.enable_group_analysis and __has_enabled_plugins(cmdline_opts.plugins_to_enable, True)):
+        if (parseargs_ns.enable_group_analysis and __has_enabled_plugins(parseargs_ns.plugins_to_enable, True)):
             # Map the hostname-filesystem -> file
             filenames_for_hosts = {}
             # Map the hostname -> filesystems found on the hostname
@@ -555,7 +537,7 @@ if __name__ == "__main__":
             for path_to_filename in path_to_filenames:
                 chostname = get_hostname(path_to_filename)
                 cfilesystems = get_filesystems(path_to_filename,
-                                                cmdline_opts.gfs2_filesystem_names)
+                                                parseargs_ns.gfs2_filesystem_names)
                 if (cfilesystems):
                     filenames_for_hosts[chostname] = path_to_filename
                     for filesystem in cfilesystems:
@@ -578,7 +560,7 @@ if __name__ == "__main__":
                     for chostname in filesystems_on_hosts.get(filesystem):
                         fs_host_key = "%s-%s" %(chostname, filesystem)
                         path_to_filename = filenames_for_hosts.get(fs_host_key)
-                        if (not cmdline_opts.gfs2_filesystem_names or filesystem in cmdline_opts.gfs2_filesystem_names):
+                        if (not parseargs_ns.gfs2_filesystem_names or filesystem in parseargs_ns.gfs2_filesystem_names):
                             message = "The file will be analyzed for filesystem \"%s\" for " %(filesystem)
                             message += "host \"%s\": %s" %(chostname, path_to_filename)
                             logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
@@ -586,7 +568,7 @@ if __name__ == "__main__":
                             try:
                                 current_snapshots = __analyze_file(path_to_filename,
                                                                    [filesystem],
-                                                                   cmdline_opts.show_ended_process_and_tlocks).get(filesystem)
+                                                                   parseargs_ns.show_ended_process_and_tlocks).get(filesystem)
                                 message =  "The analyzing of the file is complete."
                                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
                             except AttributeError:
@@ -596,18 +578,18 @@ if __name__ == "__main__":
                             if (current_snapshots):
                                 snapshots_by_filesystem += current_snapshots
                     if (snapshots_by_filesystem):
-                        path_to_output_dir = os.path.join(os.path.join(cmdline_opts.path_to_output_dir,
+                        path_to_dst_dir = os.path.join(os.path.join(parseargs_ns.path_to_dst_dir,
                                                                        "multiple_nodes"),
                                                           "%s" %(filesystem))
                         # All the warnings found on the filesystem after plugins have ran.
                         warnings = __plugins_run(group_snapshots(snapshots_by_filesystem),
-                                                 path_to_output_dir,
+                                                 path_to_dst_dir,
                                                  enable_html_format, enable_png_format,
                                                  enable_graphs,
-                                                 cmdline_opts.plugins_to_enable,
+                                                 parseargs_ns.plugins_to_enable,
                                                  is_multi_node_supported=True)
-                        #warnings = merge_dicts(warnings, __output_warnings(warnings, path_to_output_dir,
-                        #                                        disable_std_out=cmdline_opts.disable_std_out,
+                        #warnings = merge_dicts(warnings, __output_warnings(warnings, path_to_dst_dir,
+                        #                                        disable_std_out=parseargs_ns.disable_std_out,
                         #                                        html_format=enable_html_format)
     except KeyboardInterrupt:
         print ""
