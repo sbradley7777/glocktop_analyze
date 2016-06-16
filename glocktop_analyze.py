@@ -31,7 +31,6 @@ import os
 import os.path
 import copy
 import argparse
-import glob
 
 import glocktop_analyze
 from glocktop_analyze.utilities import LogWriter
@@ -454,7 +453,6 @@ if __name__ == "__main__":
                 return False
             return False
 
-        print parseargs_ns.path_to_src_file
         path_to_filenames = []
         for filename in parseargs_ns.path_to_src_file:
             if (os.path.isfile(filename)):
@@ -520,7 +518,7 @@ if __name__ == "__main__":
                                               enable_graphs,
                                               parseargs_ns.plugins_to_enable)
             # Output or write any warnings found.
-            __output_warnings(warnings, path_to_dst_dir,
+            __output_warnings(warnings, parseargs_ns.path_to_dst_dir,
                               disable_std_out=parseargs_ns.disable_std_out,
                               html_format=enable_html_format)
 
@@ -579,8 +577,7 @@ if __name__ == "__main__":
                                 snapshots_by_filesystem += current_snapshots
                     if (snapshots_by_filesystem):
                         path_to_dst_dir = os.path.join(os.path.join(parseargs_ns.path_to_dst_dir,
-                                                                       "multiple_nodes"),
-                                                          "%s" %(filesystem))
+                                                                    "multiple_nodes"))
                         # All the warnings found on the filesystem after plugins have ran.
                         warnings = __plugins_run(group_snapshots(snapshots_by_filesystem),
                                                  path_to_dst_dir,
@@ -588,9 +585,6 @@ if __name__ == "__main__":
                                                  enable_graphs,
                                                  parseargs_ns.plugins_to_enable,
                                                  is_multi_node_supported=True)
-                        #warnings = merge_dicts(warnings, __output_warnings(warnings, path_to_dst_dir,
-                        #                                        disable_std_out=parseargs_ns.disable_std_out,
-                        #                                        html_format=enable_html_format)
     except KeyboardInterrupt:
         print ""
         message =  "This script will exit since control-c was executed by end user."

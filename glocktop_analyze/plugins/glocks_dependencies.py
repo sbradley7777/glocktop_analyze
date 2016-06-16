@@ -279,7 +279,7 @@ class GlocksDependencies(Plugin):
                     warning_msg += "Possible performance degradation or hung detected. "
                     warning_msg += "One possible cause is filesystem has used more than 80% of free space."
                     self.add_warning(Admonition(snapshot.get_hostname(), self.get_filesystem_name(),
-                                                "Glocks", warning_msg, https://access.redhat.com/solutions/315953))
+                                                "Glocks", warning_msg, "https://access.redhat.com/solutions/315953"))
 
     def console(self):
         summary = self.__get_text(colorize=True)
