@@ -10,9 +10,10 @@
 import logging
 import logging.handlers
 import os.path
+import locale
 
 import glocktop_analyze
-from glocktop_analyze.plugins import Plugin
+from glocktop_analyze.plugins import Plugin, Admonition
 from glocktop_analyze.plugins import generate_date_graphs
 from glocktop_analyze.glocks_stats import GlocksStats, GlockStat, GLOCK_TYPES
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
@@ -21,12 +22,16 @@ from glocktop_analyze.html import generate_css_header, generate_table
 from glocktop_analyze.html import generate_footer
 
 class GSStats(Plugin):
+    OPTIONS = [("high_glocks_count_total",
+                "An integer value for a threshold for total number of glocks on all filesystems.",
+                1000000)]
+
     def __init__(self, snapshots, path_to_output_dir, options):
         snapshots_with_stats = []
         for snapshot in snapshots:
             if (not snapshot.get_glocks_stats() == None):
                 snapshots_with_stats.append(snapshot)
-        Plugin.__init__(self, "glock_stats", "The stats for the different glock types and states.",
+        Plugin.__init__(self, "glocks_stats", "The stats for the different glock types and states.",
                         snapshots_with_stats, "Glocks Stats", path_to_output_dir,
                         options)
 
@@ -105,6 +110,40 @@ class GSStats(Plugin):
             return "%s: %s\n\n%s\n" %(self.get_title(), self.get_description(),
                                    summary.strip())
         return ""
+
+    def analyze(self):
+        # Analyze for warning of high number of glocks.
+        snapshot_glocks_total_highest = 0
+        glock_states = ["Unlocked", "Locked"]
+        for snapshot in self.get_snapshots():
+            glocks_stats = snapshot.get_glocks_stats()
+            formatted_table = tableize(glocks_stats.get_table(), ["Glock States"] +
+                                       glocktop_analyze.glocks_stats.GLOCK_TYPES, colorize=True).rstrip()
+
+            # The total locked + unlocked for each gtype should be total number
+            # of glocks.
+            snapshot_glocks_total = 0
+            for gstate in glock_states:
+                gtypes = glocks_stats.get_stats_by_state(gstate)
+                for gtype in gtypes.keys():
+                    snapshot_glocks_total += gtypes.get(gtype)
+            if (snapshot_glocks_total > snapshot_glocks_total_highest):
+                snapshot_glocks_total_highest = snapshot_glocks_total
+
+        if (snapshot_glocks_total_highest > self.get_option("high_glocks_count_total")):
+            # Call filesystem "all filesystems" since glocks stats is for all
+            # filesystems and do not want duplicates.
+            try:
+                locale.setlocale(locale.LC_ALL, 'en_US.UTF-8') 
+            except locale.Error:
+                # Set default
+                locale.setlocale(locale.LC_ALL, '')
+            high_glocks_count_total_comma = locale.format('%d', self.get_option("high_glocks_count_total"), True)
+            warning_msg =  "The number of total glocks on a snaphot of ALL gfs2 filesystem "
+            warning_msg += "exceeded: %s." %(high_glocks_count_total_comma)
+            self.add_warning(Admonition(snapshot.get_hostname(), "all filesystems", "Glocks",
+                                        warning_msg,
+                                        "https://access.redhat.com/solutions/1603713"))
 
     def console(self):
         summary = self.__get_text(colorize=True)
