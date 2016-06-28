@@ -31,6 +31,7 @@ import os
 import os.path
 import copy
 import argparse
+import glob
 
 import glocktop_analyze
 from glocktop_analyze.utilities import LogWriter
@@ -300,6 +301,10 @@ class AbsolutePathActionAppend(argparse._AppendAction):
             if (os.path.exists(os.path.abspath(os.path.expanduser(value)))
                   and os.path.isfile(os.path.abspath(os.path.expanduser(value)))):
                 valid_filenames.append(os.path.abspath(os.path.expanduser(value)))
+            elif (os.path.exists(os.path.abspath(os.path.expanduser(value)))
+                  and os.path.isdir(os.path.abspath(os.path.expanduser(value)))):
+                for path_to_filename in glob.glob("%s/*" %(value.rstrip("/"))):
+                    valid_filenames.append(os.path.abspath(os.path.expanduser(path_to_filename)))
         items += valid_filenames
         # Remove duplicates before setting.
         setattr(namespace, self.dest, dict.fromkeys(items).keys())
