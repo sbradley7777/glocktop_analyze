@@ -77,6 +77,18 @@ class GlocksStats():
             table.append(cstats)
         return table
 
+    def get_glocks_count(self):
+        glock_states = ["Unlocked", "Locked"]
+        # The total locked + unlocked for each gtype should be total number of
+        # glocks.
+        snapshot_glocks_total = 0
+        for gstate in glock_states:
+            gtypes = self.get_stats_by_state(gstate)
+            for gtype in gtypes.keys():
+                snapshot_glocks_total += gtypes.get(gtype)
+        return snapshot_glocks_total
+
+
 class GlockStat():
     def __init__(self, filesystem_name, gtype, state):
         self.__filesystem_name = filesystem_name

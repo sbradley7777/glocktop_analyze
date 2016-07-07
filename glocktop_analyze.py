@@ -566,7 +566,7 @@ if __name__ == "__main__":
                                                             "multiple_nodes"))
                 for filesystem in filesystems_on_hosts.keys():
                     snapshots_by_filesystem = []
-                    warnings = {}
+                    warnings = []
                     for chostname in filesystems_on_hosts.get(filesystem):
                         fs_host_key = "%s-%s" %(chostname, filesystem)
                         path_to_filename = filenames_for_hosts.get(fs_host_key)

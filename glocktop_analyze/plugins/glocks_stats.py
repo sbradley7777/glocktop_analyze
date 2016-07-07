@@ -27,6 +27,8 @@ class GSStats(Plugin):
                 1000000)]
 
     def __init__(self, snapshots, path_to_output_dir, options):
+        self.__gs_glocks_total_lowest = None
+        self.__gs_glocks_total_highest = None
         snapshots_with_stats = []
         for snapshot in snapshots:
             if (not snapshot.get_glocks_stats() == None):
@@ -91,8 +93,40 @@ class GSStats(Plugin):
                                                             png_format=png_format)
             return path_to_image_files
 
+    def __get_glocks_count_table(self):
+        try:
+            locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+        except locale.Error:
+            # Set default
+            locale.setlocale(locale.LC_ALL, '')
+
+        glocks_stats_totals_table = []
+        glocks_count = locale.format('%d',
+                                     self.__gs_glocks_total_lowest.get_glocks_count(),
+                                     True)
+        glocks_stats_totals_table.append([self.get_hostname(),
+                                          self.__gs_glocks_total_lowest.get_filesystem_name(),
+                                          self.__gs_glocks_total_lowest.get_date_time(),
+                                          glocks_count])
+        glocks_count = locale.format('%d',
+                                     self.__gs_glocks_total_highest.get_glocks_count(),
+                                     True)
+        glocks_stats_totals_table.append([self.get_hostname(),
+                                          self.__gs_glocks_total_highest.get_filesystem_name(),
+                                          self.__gs_glocks_total_highest.get_date_time(),
+                                          glocks_count])
+        return glocks_stats_totals_table
+
     def __get_text(self, colorize=False):
         summary = ""
+        if ((not self.__gs_glocks_total_lowest == None) or
+            (not self.__gs_glocks_total_highest == None)):
+            glocks_stats_totals_table = self.__get_glocks_count_table()
+            if (len(glocks_stats_totals_table)):
+                summary += "The lowest and highest total count of glocks in all the snapshots.\n"
+                summary += "%s\n\n" %(tableize(glocks_stats_totals_table,
+                                               ["Hostname", "Filesystem", "Glock Total Count", "Time Occurred"],
+                                               colorize=colorize).strip())
         for snapshot in self.get_snapshots():
             glocks_stats = snapshot.get_glocks_stats()
             formatted_table = tableize(glocks_stats.get_table(), ["Glock States"] +
@@ -106,44 +140,40 @@ class GSStats(Plugin):
                  summary += "Glock stats at %s for filesystem: " %(glocks_stats.get_date_time().strftime("%Y-%m-%d %H:%M:%S"))
                  summary += "%s\n%s\n\n" %(self.get_filesystem_name(), formatted_table)
         if (summary):
-            summary = "The stats for the different states and types of the glocks.\n%s" %(summary)
-            return "%s: %s\n\n%s\n" %(self.get_title(), self.get_description(),
-                                   summary.strip())
+            return "%s: %s\n\n%s\n" %(self.get_title(), self.get_description(), summary.strip())
         return ""
 
     def analyze(self):
-        # Analyze for warning of high number of glocks.
-        snapshot_glocks_total_highest = 0
-        glock_states = ["Unlocked", "Locked"]
         for snapshot in self.get_snapshots():
             glocks_stats = snapshot.get_glocks_stats()
             formatted_table = tableize(glocks_stats.get_table(), ["Glock States"] +
                                        glocktop_analyze.glocks_stats.GLOCK_TYPES, colorize=True).rstrip()
 
-            # The total locked + unlocked for each gtype should be total number
-            # of glocks.
-            snapshot_glocks_total = 0
-            for gstate in glock_states:
-                gtypes = glocks_stats.get_stats_by_state(gstate)
-                for gtype in gtypes.keys():
-                    snapshot_glocks_total += gtypes.get(gtype)
-            if (snapshot_glocks_total > snapshot_glocks_total_highest):
-                snapshot_glocks_total_highest = snapshot_glocks_total
+            if (self.__gs_glocks_total_lowest == None):
+                self.__gs_glocks_total_lowest = glocks_stats
+            elif (glocks_stats.get_glocks_count() <= self.__gs_glocks_total_lowest.get_glocks_count()):
+                self.__gs_glocks_total_lowest = glocks_stats
+            if (self.__gs_glocks_total_highest == None):
+                self.__gs_glocks_total_highest = glocks_stats
+            elif (glocks_stats.get_glocks_count() >= self.__gs_glocks_total_highest.get_glocks_count()):
+                self.__gs_glocks_total_highest = glocks_stats
 
-        if (snapshot_glocks_total_highest > self.get_option("high_glocks_count_total")):
-            # Call filesystem "all filesystems" since glocks stats is for all
-            # filesystems and do not want duplicates.
-            try:
-                locale.setlocale(locale.LC_ALL, 'en_US.UTF-8') 
-            except locale.Error:
-                # Set default
-                locale.setlocale(locale.LC_ALL, '')
-            high_glocks_count_total_comma = locale.format('%d', self.get_option("high_glocks_count_total"), True)
-            warning_msg =  "The number of total glocks on a snaphot of ALL gfs2 filesystem "
-            warning_msg += "exceeded: %s." %(high_glocks_count_total_comma)
-            self.add_warning(Admonition(snapshot.get_hostname(), "all filesystems", "Glocks",
-                                        warning_msg,
-                                        "https://access.redhat.com/solutions/1603713"))
+        if (not self.__gs_glocks_total_highest == None):
+            if (self.__gs_glocks_total_highest.get_glocks_count() >
+                self.get_option("high_glocks_count_total")):
+                try:
+                    locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+                except locale.Error:
+                    # Set default
+                    locale.setlocale(locale.LC_ALL, '')
+                high_glocks_count_total_comma = locale.format('%d', self.get_option("high_glocks_count_total"), True)
+                # Call filesystem "all filesystems" since glocks stats is for
+                # all filesystems and do not want duplicates.
+                warning_msg =  "The number of total glocks on a snaphot of ALL gfs2 filesystem "
+                warning_msg += "exceeded: %s." %(high_glocks_count_total_comma)
+                self.add_warning(Admonition(snapshot.get_hostname(), "all filesystems", "Glocks",
+                                            warning_msg,
+                                            "https://access.redhat.com/solutions/1603713"))
 
     def console(self):
         summary = self.__get_text(colorize=True)
@@ -164,6 +194,15 @@ class GSStats(Plugin):
             filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
             path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                             self.get_filesystem_name()), filename)
+            if ((not self.__gs_glocks_total_lowest == None) or
+                (not self.__gs_glocks_total_highest == None)):
+                glocks_stats_totals_table = self.__get_glocks_count_table()
+                if (len(glocks_stats_totals_table)):
+                    title = "The lowest and highest total count of glocks in all the snapshots."
+                    bdata += generate_table(glocks_stats_totals_table,
+                                            ["Hostname", "Filesystem", "Glock Total Count", "Time Occurred"],
+                                            title=title,
+                                            description="")
             for snapshot in self.get_snapshots():
                 glocks_stats = snapshot.get_glocks_stats()
                 title =  "Glock stats at %s for filesystem: %s" %(glocks_stats.get_date_time().strftime("%Y-%m-%d %H:%M:%S"),
