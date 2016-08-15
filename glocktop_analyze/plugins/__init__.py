@@ -154,7 +154,11 @@ class PluginMultinode(Plugin):
         Plugin.__init__(self, name, description, snapshots, title, path_to_output_dir, options, multiply_node_enabled=True)
 
     def get_hostnames(self):
-        return self.__grouped_snapshots.keys()
+        hostnames = []
+        for snapshot in self.get_snapshots():
+            if (not snapshot.get_hostname() in hostnames):
+                hostnames.append(snapshot.get_hostname())
+        return hostnames
 
     def get_snapshots_start_time(self, hostname=""):
         """
@@ -165,12 +169,9 @@ class PluginMultinode(Plugin):
         """
         if (not hostname):
             return Plugin.get_snapshots_start_time(self)
-        snapshots_start_time = None
-        for snapshot in self.get_snapshots():
-            if (snapshot.get_hostname() == hostname):
-                snapshots_start_time, snapshots_end_time = self.get_snapshots_times(snapshots)
-                return snapshots_start_time
-        return None
+        snapshots = self.get_snapshots(hostname)
+        snapshots_start_time, snapshots_end_time = self.get_snapshots_times(snapshots)
+        return snapshots_start_time
 
     def get_snapshots_end_time(self, hostname=""):
         """
@@ -181,10 +182,8 @@ class PluginMultinode(Plugin):
         """
         if (not hostname):
             return Plugin.get_snapshots_start_time(self)
-        snapshots_end_time = None
-        for snapshot in self.get_snapshots():
-            if (snapshot.get_hostname() == hostname):
-                snapshots_start_time, snapshots_end_time = self.get_snapshots_times(snapshots)
+        snapshots = self.get_snapshots(hostname)
+        snapshots_start_time, snapshots_end_time = self.get_snapshots_times(snapshots)
         return snapshots_end_time
 
     def get_snapshots(self, hostname=""):
