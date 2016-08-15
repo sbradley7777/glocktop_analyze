@@ -32,7 +32,7 @@ Then run the following to see if script works and loads libraries.
 ```
 $ glocktop_analyze.py -h
 ```
-### Setup for `rpm`
+### Building an `rpm`
 There is an RPM spec file in the repo that can be used to build an `glocktop_analyze` rpm.
 ```
 $ rpmbuild -ba glocktop_analyze.spec
@@ -77,7 +77,7 @@ This command will create files that `glocktop_analyze` can read in the current
 working directory of `./glock_dump_merge` from the files that are found under
 directory `glocktop_analyze`. The command `glock_dump_merge.py` expects the
 files in that directory were captured with
-[``gfs2_lockcapture`](http://git.fedorahosted.org/cgit/gfs2-utils.git/tree/gfs2/scripts/gfs2_lockcapture).
+[`gfs2_lockcapture`](http://git.fedorahosted.org/cgit/gfs2-utils.git/tree/gfs2/scripts/gfs2_lockcapture).
 ```
 $ glock_dump_merge.py -p ./gfs2_lockcapture-2016-04-22/ -o ./glock_dump_merge
 ```
