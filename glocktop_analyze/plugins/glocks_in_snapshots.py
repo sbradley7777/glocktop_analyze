@@ -49,11 +49,11 @@ class GlocksInSnapshots(Plugin):
         table = []
         for pair in sorted(self.__glocks_in_snapshots.items(), key=itemgetter(1), reverse=True):
             if (pair[1] >= self.__minimum_glocks_in_snapshots):
-                table.append([self.get_filesystem_name(), pair[0], pair[1]])
+                table.append([self.get_hostname(), self.get_filesystem_name(), pair[0], pair[1]])
         if (table):
             return "%s: %s\n\n%s\n%s\n" %(self.get_title(), self.get_description(),
                                           "Glocks that appeared in at least %d snapshots." %(self.__minimum_glocks_in_snapshots),
-                                          tableize(table, ["Filesystem Name", "Glock Type/Glocks Inode",
+                                          tableize(table, ["Hostname", "Filesystem Name", "Glock Type/Glocks Inode",
                                                            "Number of Snapshots Appeared in"], colorize=colorize).strip())
 
     def analyze(self):
@@ -93,9 +93,10 @@ class GlocksInSnapshots(Plugin):
                 table = []
                 for pair in sorted(self.__glocks_in_snapshots.items(), key=itemgetter(1), reverse=True):
                     if (pair[1] >= self.__minimum_glocks_in_snapshots):
-                        table.append([self.get_filesystem_name(), pair[0], pair[1]])
+                        table.append([self.get_hostname(), self.get_filesystem_name(), pair[0], pair[1]])
                 bdata = generate_table(table,
-                                       ["Filesystem Name", "Glock Type/Glocks Inode", "Number of Snapshots Appeared in"],
+                                       ["Hostname", "Filesystem Name", "Glock Type/Glocks Inode",
+                                        "Number of Snapshots Appeared in"],
                                        title=self.get_title(),
                                        description="The number of times that a glock appeared in a snapshot.")
                 wdata = "%s\n%s\n%s" %(generate_css_header(include_css_table=True), bdata, generate_footer())
