@@ -57,6 +57,22 @@ class GlocksActivity(Plugin):
                                   summary.rstrip("----------------"))
         return ""
 
+    def __get_raw(self, colorize=False):
+        raw_data = ""
+        for snapshot in self.get_snapshots():
+            current_raw_data = ""
+            glocks = snapshot.get_glocks()
+            for glock in glocks:
+                glock_holders = glock.get_holders()
+                current_raw_data += "  %s\n" %(glock)
+                for holder in glock_holders:
+                    current_raw_data += "     %s\n" %(holder)
+                    if (not glock.get_glock_object() == None):
+                        current_raw_data += "     %s\n" %(glock.get_glock_object())
+            if (current_raw_data.strip()):
+                raw_data += "%s\n%s\n\n" %(str(snapshot), current_raw_data.strip())
+        return raw_data.strip()
+
     def __get_html(self, colorize=False):
         summary = ""
         for snapshot in self.get_snapshots():
@@ -108,5 +124,14 @@ class GlocksActivity(Plugin):
 
         if (wdata):
             if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
+                message = "An error occurred writing to the file: %s" %(path_to_output_file)
+                logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
+        raw_data = self.__get_raw()
+        if (raw_data):
+            filename = "%s-raw.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
+            path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+                                                            self.get_filesystem_name()), filename)
+            if (not write_to_file(path_to_output_file, "%s\n" %(raw_data),
+                                  append_to_file=False, create_file=True)):
                 message = "An error occurred writing to the file: %s" %(path_to_output_file)
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
