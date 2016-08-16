@@ -70,7 +70,7 @@ class GlocksActivity(Plugin):
                     if (not glock.get_glock_object() == None):
                         current_raw_data += "     %s\n" %(glock.get_glock_object())
             if (current_raw_data.strip()):
-                raw_data += "%s\n%s\n\n" %(str(snapshot), current_raw_data.strip())
+                raw_data += "%s\n  %s\n\n" %(str(snapshot), current_raw_data.strip())
         return raw_data.strip()
 
     def __get_html(self, colorize=False):
