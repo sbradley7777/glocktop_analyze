@@ -26,77 +26,34 @@ class GlocksActivityMultipleNodes(PluginMultinode):
     OPTIONS = [("mininum_waiter_count",
                 "The mininum number of holder and waiters that are required on a glock.",
                 2)]
-    def __init__(self, snapshots, path_to_output_dir, options):
-        Plugin.__init__(self, "glocks_activity-",
-                        "The glock's lockdump analyzed for multiple holder and waiters from multiple nodes.",
-                        snapshots, "Glocks Activity for Multiple Nodes", path_to_output_dir,
-                        options)
-        self.__glock_dump = []
+    def __init__(self, grouped_snapshots, path_to_output_dir, options):
+        PluginMultinode.__init__(self, "glocks_activity-multiple_nodes",
+                                 "The glock's lockdump analyzed for multiple holder and waiters from multiple nodes.",
+                                 grouped_snapshots, "Glocks Activity for Multiple Nodes", path_to_output_dir,
+                                 options)
         self.__mininum_waiter_count = int(self.get_option("mininum_waiter_count"))
 
     def __get_text(self, colorize=False):
         summary = ""
-        for snapshot in self.get_snapshots():
-            current_summary = ""
-            glocks = snapshot.get_glocks()
-            for glock in glocks:
-                glock_holders = glock.get_holders()
-                if (len(glock_holders) >= self.__mininum_waiter_count):
-                    current_summary += "  %s\n" %(glock)
-                    for holder in glock_holders:
-                        current_summary += "     %s\n" %(holder)
-                    if (not glock.get_glock_object() == None):
-                        current_summary += "     %s\n" %(glock.get_glock_object())
-            if (current_summary):
-                current_summary_title = str(snapshot)
-                if (colorize):
-                    current_summary_title = ColorizeConsoleText.red(str(snapshot))
-                summary += "%s\n%s\n" %(current_summary_title, current_summary)
-        if (summary):
-            return "%s: %s\n%s" %(self.get_title(), self.get_description(),
-                                  summary.rstrip("----------------"))
         return ""
 
     def __get_raw(self, colorize=False):
         raw_data = ""
-        for snapshot in self.get_snapshots():
-            current_raw_data = ""
-            glocks = snapshot.get_glocks()
-            for glock in glocks:
-                glock_holders = glock.get_holders()
-                current_raw_data += "  %s\n" %(glock)
-                for holder in glock_holders:
-                    current_raw_data += "     %s\n" %(holder)
-                    if (not glock.get_glock_object() == None):
-                        current_raw_data += "     %s\n" %(glock.get_glock_object())
-            if (current_raw_data.strip()):
-                raw_data += "%s\n  %s\n\n" %(str(snapshot), current_raw_data.strip())
+        # Group the snapshots together based on time snapshot taken.
+        grouped_snapshots = self.get_snapshots_by_group()
+        group_count_sorted = grouped_snapshots.keys()
+        group_count_sorted.sort()
+        snapshots_table_by_group = ""
+        for group_count in group_count_sorted:
+            gsnapshots = grouped_snapshots.get(group_count)
+            for gsnapshot in gsnapshots:
+                print "%s on %s at %s" %(gsnapshot.get_filesystem_name(), gsnapshot.get_hostname(), gsnapshot.get_date_time())
+            print
+
         return raw_data.strip()
 
     def __get_html(self, colorize=False):
         summary = ""
-        for snapshot in self.get_snapshots():
-            current_summary = ""
-            glocks = snapshot.get_glocks()
-            for glock in glocks:
-                glock_holders = glock.get_holders()
-                if (len(glock_holders) >= self.__mininum_waiter_count):
-                    current_summary += "<b>&nbsp;&nbsp;%s</b><BR/>" %(glock)
-                    for holder in glock_holders:
-                        current_summary += "&nbsp;&nbsp;&nbsp;&nbsp; %s<BR/>" %(holder)
-                    if (not glock.get_glock_object() == None):
-                        current_summary += "&nbsp;&nbsp;&nbsp;&nbsp; %s<BR/>" %(glock.get_glock_object())
-                    current_summary += "<BR/>"
-            if (current_summary):
-                current_summary_title = str(snapshot)
-                if (colorize):
-                    current_summary_title = "<b><span class=\"red\">%s</span></b>" %(str(snapshot))
-                summary += "%s<BR/>%s" %(current_summary_title, current_summary)
-        if (summary):
-            header =  "<center><H3>Glock Activity between "
-            header += "%s and %s </H3></center>" %(self.get_snapshots_start_time().strftime("%Y-%m-%d %H:%M:%S"),
-                                                   self.get_snapshots_end_time().strftime("%Y-%m-%d %H:%M:%S"))
-            return header + summary
         return ""
 
     def console(self):
