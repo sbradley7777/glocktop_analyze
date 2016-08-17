@@ -65,7 +65,7 @@ from glocktop_analyze.plugins.glocks_dependencies import GlocksDependencies
 
 # Plugins that can run on multiply nodes
 from glocktop_analyze import group_snapshots
-from glocktop_analyze.plugins.snapshots_multinode import SnapshotsMultiplyNodes
+from glocktop_analyze.plugins.snapshots_multiplenodes import SnapshotsMultipleNodes
 
 # #####################################################################
 # Global variables
@@ -178,7 +178,7 @@ def __analyze_file(path_to_output_file, gfs2_filesystem_names, show_ended_proces
 # ##############################################################################
 def __get_plugins_class_names(is_multi_node_supported=False):
     if (is_multi_node_supported):
-        return ["SnapshotsMultiplyNodes"]
+        return ["SnapshotsMultipleNodes"]
     else:
         return ["GlocksActivity",
                 "GSStats",
