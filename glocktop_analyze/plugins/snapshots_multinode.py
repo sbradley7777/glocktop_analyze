@@ -20,10 +20,10 @@ import glocktop_analyze
 from glocktop_analyze.plugins import PluginMultinode
 from glocktop_analyze.utilities import ColorizeConsoleText, write_to_file, tableize
 
-class SnapshotsMultiplyNodes(PluginMultinode):
+class SnapshotsMultipleNodes(PluginMultinode):
     def __init__(self, grouped_snapshots, path_to_output_dir, options):
-        PluginMultinode.__init__(self, "snapshots-multiply_nodes",
-                                 "The stats for the snapshots and dlm activity for multiply nodes.",
+        PluginMultinode.__init__(self, "snapshots-multiple_nodes",
+                                 "The stats for the snapshots and dlm activity for multiple nodes.",
                                  grouped_snapshots, "Snapshot Stats for Multiple Nodes", path_to_output_dir,
                                  options)
 
