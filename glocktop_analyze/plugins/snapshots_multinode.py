@@ -167,8 +167,14 @@ class SnapshotsMultipleNodes(PluginMultinode):
                 path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
                                                                 self.get_filesystem_name()), filename)
         else:
-            # write html output
-            pass
+            message = "This plugin does not currently have HTML format. Only text format."
+            logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).info(message)
+            summary = self.__get_text(colorize=False)
+            if (summary):
+                wdata = "%s: %s\n%s\n" %(self.get_title(), self.get_description(), summary.strip())
+                filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
+                path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
+                                                                self.get_filesystem_name()), filename)
         if (wdata):
             if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
                 message = "An error occurred writing to the file: %s" %(path_to_output_file)
