@@ -35,7 +35,27 @@ class GlocksActivityMultipleNodes(PluginMultinode):
 
     def __get_text(self, colorize=False):
         summary = ""
-        return ""
+        sorted_snapshots = self.get_snapshots_sorted_by_time()
+        for snapshot in sorted_snapshots:
+            current_summary = ""
+            glocks = snapshot.get_glocks()
+            for glock in glocks:
+                glock_holders = glock.get_holders()
+                if (len(glock_holders) >= self.__mininum_waiter_count):
+                    current_summary += "  %s\n" %(glock)
+                    for holder in glock_holders:
+                        current_summary += "     %s\n" %(holder)
+                    if (not glock.get_glock_object() == None):
+                        current_summary += "     %s\n" %(glock.get_glock_object())
+            current_summary_title = str(snapshot)
+            if (current_summary):
+                if (colorize):
+                    current_summary_title = ColorizeConsoleText.red(current_summary_title)
+                summary += "%s\n%s\n\n" %(current_summary_title, current_summary.strip())
+        if (summary):
+            return "%s: %s\n%s" %(self.get_title(), self.get_description(),
+                                  summary.strip())
+        return summary.strip()
 
     def __get_raw(self, colorize=False):
         raw_data = ""
