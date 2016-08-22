@@ -205,6 +205,18 @@ class PluginMultinode(Plugin):
         # and value is a list of snapshots that were taken around the same time.
         return self.__grouped_snapshots
 
+    def get_snapshots_sorted_by_time(self):
+        sorted_snapshots = []
+        grouped_snapshots = self.get_snapshots_by_group()
+        group_count_sorted = grouped_snapshots.keys()
+        group_count_sorted.sort()
+        snapshots_table_by_group = ""
+        for group_count in group_count_sorted:
+            gsnapshots = grouped_snapshots.get(group_count)
+            for gsnapshot in gsnapshots:
+                sorted_snapshots.append(gsnapshot)
+        return sorted_snapshots
+
 class Admonition:
     # A class that will hold a warning/notice about something found.
     def __init__(self, hostname, filesystem_name, wtype, description, uri=""):

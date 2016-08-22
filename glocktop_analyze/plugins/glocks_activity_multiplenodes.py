@@ -39,17 +39,19 @@ class GlocksActivityMultipleNodes(PluginMultinode):
 
     def __get_raw(self, colorize=False):
         raw_data = ""
-        # Group the snapshots together based on time snapshot taken.
-        grouped_snapshots = self.get_snapshots_by_group()
-        group_count_sorted = grouped_snapshots.keys()
-        group_count_sorted.sort()
-        snapshots_table_by_group = ""
-        for group_count in group_count_sorted:
-            gsnapshots = grouped_snapshots.get(group_count)
-            for gsnapshot in gsnapshots:
-                print "%s on %s at %s" %(gsnapshot.get_filesystem_name(), gsnapshot.get_hostname(), gsnapshot.get_date_time())
-            print
-
+        sorted_snapshots = self.get_snapshots_sorted_by_time()
+        for snapshot in sorted_snapshots:
+            current_raw_data = ""
+            glocks = snapshot.get_glocks()
+            for glock in glocks:
+                glock_holders = glock.get_holders()
+                current_raw_data += "  %s\n" %(glock)
+                for holder in glock_holders:
+                    current_raw_data += "     %s\n" %(holder)
+                    if (not glock.get_glock_object() == None):
+                        current_raw_data += "     %s\n" %(glock.get_glock_object())
+            if (current_raw_data):
+                raw_data += "%s\n  %s\n\n" %(str(snapshot), current_raw_data.strip())
         return raw_data.strip()
 
     def __get_html(self, colorize=False):
