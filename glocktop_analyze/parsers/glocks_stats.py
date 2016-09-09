@@ -8,6 +8,8 @@
 @copyright :  GPLv3
 """
 import re
+import locale
+locale.setlocale(locale.LC_NUMERIC, "")
 
 def parse_glocks_stats(line):
     try:
@@ -24,6 +26,11 @@ def parse_glocks_stats(line):
         return mo.groupdict()
     elif (stat_line.startswith("DLM wait")):
         split_stat_line = stat_line.split(":")
-        return {"glock_state":split_stat_line[0].strip(), "nondisk":split_stat_line[1].strip(), "inode":0, "rgrp":0, "iopen":0, "flock":0, "quota":0, "journal":0, "total":split_stat_line[1].strip()}
+        nondisk = -1
+        try:
+            nondisk = int(split_stat_line[1].strip())
+            nondisk = locale.format("%.*f", (0, nondisk), True)
+        except (ValueError, TypeError):
+            nondisk = int(split_stat_line[1].strip().strip('\0'))
+        return {"glock_state":split_stat_line[0].strip(), "nondisk":nondisk, "inode":0, "rgrp":0, "iopen":0, "flock":0, "quota":0, "journal":0, "total":split_stat_line[1].strip()}
     return {}
-
