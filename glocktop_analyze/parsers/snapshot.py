@@ -46,13 +46,30 @@ def parse_snapshot(line, show_ended_process_and_tlocks=False):
         # - 1 lock could have multiple waiters(or lines).
         dlm_activity = None
         if (len(split_line) == 2):
-            dlm_regex = "(?P<dlm_dirtbl_size>\d+)/(?P<dlm_rsbtbl_size>\d+)/(?P<dlm_lkbtbl_size>\d+)\s\[(?P<dlm_activity>\*+).*"
+            # dlm_regex = "(?P<dlm_dirtbl_size>\d+)/(?P<dlm_rsbtbl_size>\d+)/(?P<dlm_lkbtbl_size>\d+)\s\[(?P<dlm_activity>\*+).*"
+            # Need when there is no hash table sizes.
+            dlm_regex = "(?P<dlm_dirtbl_size>\d+|\s?)/(?P<dlm_rsbtbl_size>\d+|\s?)/(?P<dlm_lkbtbl_size>\d+|\s)\s\[(?P<dlm_activity>\*+).*"
             rem_dlm = re.compile(dlm_regex)
             mo_dlm = rem_dlm.match(split_line[1].strip())
             if mo_dlm:
-                dlm_activity = DLMActivity(int(mo_dlm.group("dlm_dirtbl_size")), int(mo_dlm.group("dlm_rsbtbl_size")),
-                                           int(mo_dlm.group("dlm_lkbtbl_size")), len(mo_dlm.group("dlm_activity")))
+                # Default sizes for DLM hash tables which will be used if sizes
+                # not in output.
+                dlm_dirtbl_size = 1024
+                dlm_rsbtbl_size = 1024
+                dlm_lkbtbl_size = 1024
+                dlm_dict = mo_dlm.groupdict()
+                if (dlm_dict.has_key("dlm_dirtbl_size")):
+                    if (dlm_dict.get("dlm_dirtbl_size").isdigit()):
+                        dlm_dirtbl_size = int(dlm_dict.get("dlm_dirtbl_size"))
+                if (dlm_dict.has_key("dlm_rsbtbl_size")):
+                    if (dlm_dict.get("dlm_rsbtbl_size").isdigit()):
+                        dlm_rsbtbl_size = int(dlm_dict.get("dlm_rsbtbl_size"))
+                if (dlm_dict.has_key("dlm_lkbtbl_size")):
+                    if (dlm_dict.get("dlm_lkbtbl_size").isdigit()):
+                        dlm_lkbtbl_size = int(dlm_dict.get("dlm_lkbtbl_size"))
 
+                dlm_activity = DLMActivity(dlm_dirtbl_size, dlm_rsbtbl_size, dlm_lkbtbl_size,
+                                           len(mo_dlm.group("dlm_activity")))
         return Snapshot(mo.group("filesystem"), hostname, date_time, dlm_activity, show_ended_process_and_tlocks)
     return None
 
