@@ -67,8 +67,8 @@ class GlocksActivity(Plugin):
                 current_raw_data += "  %s\n" %(glock)
                 for holder in glock_holders:
                     current_raw_data += "     %s\n" %(holder)
-                    if (not glock.get_glock_object() == None):
-                        current_raw_data += "     %s\n" %(glock.get_glock_object())
+                if (not glock.get_glock_object() == None):
+                    current_raw_data += "     %s\n" %(glock.get_glock_object())
             if (current_raw_data.strip()):
                 raw_data += "%s\n  %s\n\n" %(str(snapshot), current_raw_data.strip())
         return raw_data.strip()
