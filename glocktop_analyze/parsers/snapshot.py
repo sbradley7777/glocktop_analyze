@@ -27,7 +27,8 @@ def parse_snapshot(line, show_ended_process_and_tlocks=False):
     time_regex = "(?P<time>\d{1,2}:\d\d:\d\d)"
     year_regex = "(?P<year>\d{4})"
     hostname_regex = "@(?P<hostname>.*)"
-    regex = "^@ (?P<filesystem>\w+)\s+%s\s%s\s*%s\s%s\s%s\s\s%s" %(days_regex, months_regex, dow_regex, time_regex, year_regex, hostname_regex)
+    #regex = "^@ (?P<filesystem>\w+)\s+%s\s%s\s*%s\s%s\s%s\s\s%s" %(days_regex, months_regex, dow_regex, time_regex, year_regex, hostname_regex)
+    regex = "^@ (?P<filesystem>[a-z0-9-_]*)\s+%s\s%s\s*%s\s%s\s%s\s\s%s" %(days_regex, months_regex, dow_regex, time_regex, year_regex, hostname_regex)
 
     rem = re.compile(regex)
     mo = rem.match(line)
