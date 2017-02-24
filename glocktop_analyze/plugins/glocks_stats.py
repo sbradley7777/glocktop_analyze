@@ -182,18 +182,13 @@ class GSStats(Plugin):
 
     def write(self, html_format=False):
         wdata = ""
-        path_to_output_file = ""
-
+        filename = ""
         if (not html_format):
             filename = "%s.txt" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
-            path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
-                                                            self.get_filesystem_name()), filename)
             wdata = self.__get_text(colorize=False)
         else:
             bdata = ""
             filename = "%s.html" %(self.get_title().lower().replace(" - ", "-").replace(" ", "_"))
-            path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
-                                                            self.get_filesystem_name()), filename)
             if ((not self.__gs_glocks_total_lowest == None) or
                 (not self.__gs_glocks_total_highest == None)):
                 glocks_stats_totals_table = self.__get_glocks_count_table()
@@ -216,7 +211,7 @@ class GSStats(Plugin):
 
         if (wdata):
             path_to_output_file = os.path.join(os.path.join(self.get_path_to_output_dir(),
-                                                            self.get_filesystem_name()), path_to_output_file)
+                                                            self.get_filesystem_name()), filename)
             if (not write_to_file(path_to_output_file, wdata, append_to_file=False, create_file=True)):
                 message = "An error occurred writing to the file: %s" %(path_to_output_file)
                 logging.getLogger(glocktop_analyze.MAIN_LOGGER_NAME).debug(message)
