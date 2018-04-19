@@ -95,12 +95,11 @@ class Glock():
         # This list contains the holder and other waiting to be holders(waiters)
         self.__holders = []
         self.__glock_object = None
-
     def __str__(self):
         return "G: (%s/%s) state: %s | demote_state: %s | demote_time: %sms | hw count: %d" %(self.get_type(),
                                                                                               self.get_inode(),
                                                                                               self.get_state(),
-                                                                                              self.get_demote_state(), 
+                                                                                              self.get_demote_state(),
                                                                                               self.get_demote_time(),
                                                                                               len(self.get_holders()))
 
@@ -148,13 +147,17 @@ class Glock():
 
 class GlockHolder:
     # The GlockHolder can be the holder of glock or waiter of glocks
-    def __init__(self, text, state, flags, error, pid, command):
+    def __init__(self, text, state, flags, error, pid, command, function):
         self.__text = text
         self.__state = state
         self.__flags = flags
         self.__error = error
         self.__pid = pid
         self.__command = command
+        self.__function = function
+        # These lines give you the call trace (call stack) of the process that's
+        # either holding or waiting to hold the glock.
+        self.__call_trace = []
 
     def __str__(self):
         return self.get_text()
@@ -177,6 +180,24 @@ class GlockHolder:
     def get_command(self):
         return self.__command
 
+    def get_function(self, include_function_address=False):
+        if (include_function_address):
+            return self.__function
+        return self.__function.split("+", 1)[0].strip()
+
+    def get_call_trace(self, include_function_address=False):
+        if (include_function_address):
+            return call_trace
+        else:
+            call_trace = []
+            for ct in self.__call_trace:
+               call_trace.append(ct.split("+", 1)[0].strip())
+            return call_trace
+
+    def add_call_trace(self, call_trace):
+        self.__call_trace = call_trace
+
+
 class GlockObject():
     # The "I:" describes an inode associated with the lock, "R:" describes an
     # resource group associated with the glock, and "B:" describes a reservation
@@ -189,4 +210,3 @@ class GlockObject():
 
     def get_text(self):
         return self.__text
-

@@ -61,6 +61,7 @@ from glocktop_analyze.plugins.glocks_high_demote_seconds import GlocksHighDemote
 from glocktop_analyze.plugins.glocks_in_snapshots import GlocksInSnapshots
 from glocktop_analyze.plugins.glocks_waiters_time import GlocksWaitersTime
 from glocktop_analyze.plugins.pids import Pids
+from glocktop_analyze.plugins.pids_function import PidsFunction
 from glocktop_analyze.plugins.glocks_dependencies import GlocksDependencies
 
 # Plugins that can run on multiply nodes
@@ -189,6 +190,7 @@ def __get_plugins_class_names(is_multi_node_supported=False):
                 "GlocksInSnapshots",
                 "GlocksWaitersTime",
                 "Pids",
+                "PidsFunction",
                 "GlocksDependencies"]
 
 def __get_plugins(snapshots, path_to_output_dir, options, enabled_plugins, is_multi_node_supported=False):
@@ -470,8 +472,10 @@ if __name__ == "__main__":
             if (os.path.isfile(filename)):
                 if (is_valid_glocktop_file(filename)):
                     path_to_filenames.append(filename)
+
             elif (os.path.isdir(filename)):
                 for item in os.listdir(filename):
+                    print item
                     path_to_filename = os.path.join(filename, item)
                     if (is_valid_glocktop_file(path_to_filename)):
                         path_to_filenames.append(path_to_filename)

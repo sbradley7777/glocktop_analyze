@@ -33,10 +33,11 @@ def parse_glock(line):
     parse_glock = staticmethod(parse_glock)
 
 def parse_glock_holder(line):
-    regex = re.compile("^H: s:(\S+) f:(\S+) e:(\d+) p:(\d+) \[(\S+)\] (.+)")
+    #regex = re.compile("^H: s:(\S+) f:(\S+) e:(\d+) p:(\d+) \[(\S+)\] (.+)")
+    regex = re.compile("^H: s:(\S+) f:(\S+) e:(\d+) p:(\d+) \[(\S+)\] (.+) \[.*")
     mo = regex.match(line)
     if mo:
         return GlockHolder(line, mo.group(1), mo.group(2), mo.group(3),
-                           mo.group(4), mo.group(5))
+                           mo.group(4), mo.group(5), mo.group(6))
     return None
     parse_glock_holder = staticmethod(parse_glock_holder)

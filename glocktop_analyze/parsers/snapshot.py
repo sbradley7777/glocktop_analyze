@@ -27,11 +27,21 @@ def parse_snapshot(line, show_ended_process_and_tlocks=False):
     time_regex = "(?P<time>\d{1,2}:\d\d:\d\d)"
     year_regex = "(?P<year>\d{4})"
     hostname_regex = "@(?P<hostname>.*)"
-    #regex = "^@ (?P<filesystem>\w+)\s+%s\s%s\s*%s\s%s\s%s\s\s%s" %(days_regex, months_regex, dow_regex, time_regex, year_regex, hostname_regex)
+    # old format
+    # regex = "^@ (?P<filesystem>\w+)\s+%s\s%s\s*%s\s%s\s%s\s\s%s" %(days_regex, months_regex, dow_regex, time_regex, year_regex, hostname_regex)
+    # not sure about this format
+    # regex = "^@ (?P<filesystem>[a-z0-9-_]*)\s+%s\s%s\s*%s\s%s\s%s\s\s%s" %(days_regex, months_regex, dow_regex, time_regex, year_regex, hostname_regex)
+    # new format
     regex = "^@ (?P<filesystem>[a-z0-9-_]*)\s+%s\s%s\s*%s\s%s\s%s\s\s%s" %(days_regex, months_regex, dow_regex, time_regex, year_regex, hostname_regex)
 
     rem = re.compile(regex)
     mo = rem.match(line)
+    if (mo == None):
+        # old format, try it. My glock_merge needs to use same format as
+        # latest. Should keep this for older versions running in the wild.
+        regex = "^@ (?P<filesystem>\w+)\s+%s\s%s\s*%s\s%s\s%s\s\s%s" %(days_regex, months_regex, dow_regex, time_regex, year_regex, hostname_regex)
+        rem = re.compile(regex)
+        mo = rem.match(line)
     if mo:
         date_time = datetime.strptime("%s %s %s %s" %(mo.group("month"), mo.group("dow"), mo.group("year"), mo.group("time")), "%b %d %Y %H:%M:%S")
         split_line = mo.group("hostname").strip().split("dlm:")
@@ -79,8 +89,15 @@ def process_snapshot(snapshot, snapshot_lines):
     if (not snapshot == None):
         glock = None
         glocks_stats_lines = []
+        call_trace = []
         for sline in snapshot_lines:
             if (sline.startswith("G")):
+                if ((call_trace) and (not glock == None)):
+                    glock_holders = glock.get_holders()
+                    if (glock_holders):
+                        glock_holders[0].add_call_trace(call_trace)
+                # Reset call trace.
+                call_trace = []
                 glock = parse_glock(sline)
                 if (not glock == None):
                     snapshot.add_glock(glock)
@@ -106,7 +123,7 @@ def process_snapshot(snapshot, snapshot_lines):
             elif (sline.startswith("C")):
                 # These lines give you the call trace (call stack) of the process
                 # that's either hold‐ing or waiting to hold the glock.
-                continue
+                call_trace.append(sline.split(":")[1].strip())
             elif (sline.startswith("S")):
                 # These are not captured each time a filesystem is sampled.
 

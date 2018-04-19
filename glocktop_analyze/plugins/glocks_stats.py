@@ -153,6 +153,7 @@ class GSStats(Plugin):
                 self.__gs_glocks_total_lowest = glocks_stats
             elif (glocks_stats.get_glocks_count() <= self.__gs_glocks_total_lowest.get_glocks_count()):
                 self.__gs_glocks_total_lowest = glocks_stats
+
             if (self.__gs_glocks_total_highest == None):
                 self.__gs_glocks_total_highest = glocks_stats
             elif (glocks_stats.get_glocks_count() >= self.__gs_glocks_total_highest.get_glocks_count()):
@@ -195,7 +196,7 @@ class GSStats(Plugin):
                 if (len(glocks_stats_totals_table)):
                     title = "The lowest and highest total count of glocks in all the snapshots."
                     bdata += generate_table(glocks_stats_totals_table,
-                                            ["Hostname", "Filesystem", "Glock Total Count", "Time Occurred"],
+                                            ["Hostname", "Filesystem", "Time Occurred", "Glock Total Count"],
                                             title=title,
                                             description="")
             for snapshot in self.get_snapshots():
