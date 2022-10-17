@@ -475,7 +475,6 @@ if __name__ == "__main__":
 
             elif (os.path.isdir(filename)):
                 for item in os.listdir(filename):
-                    print item
                     path_to_filename = os.path.join(filename, item)
                     if (is_valid_glocktop_file(path_to_filename)):
                         path_to_filenames.append(path_to_filename)

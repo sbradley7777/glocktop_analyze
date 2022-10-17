@@ -27,13 +27,13 @@ def parse_snapshot(line, show_ended_process_and_tlocks=False):
     time_regex = "(?P<time>\d{1,2}:\d\d:\d\d)"
     year_regex = "(?P<year>\d{4})"
     hostname_regex = "@(?P<hostname>.*)"
+
     # old format
     # regex = "^@ (?P<filesystem>\w+)\s+%s\s%s\s*%s\s%s\s%s\s\s%s" %(days_regex, months_regex, dow_regex, time_regex, year_regex, hostname_regex)
     # not sure about this format
     # regex = "^@ (?P<filesystem>[a-z0-9-_]*)\s+%s\s%s\s*%s\s%s\s%s\s\s%s" %(days_regex, months_regex, dow_regex, time_regex, year_regex, hostname_regex)
     # new format
-    regex = "^@ (?P<filesystem>[a-z0-9-_]*)\s+%s\s%s\s*%s\s%s\s%s\s\s%s" %(days_regex, months_regex, dow_regex, time_regex, year_regex, hostname_regex)
-
+    regex = "^@ (?P<filesystem>[A-Za-z0-9-_]*)\s+%s\s%s\s*%s\s%s\s%s\s\s%s" %(days_regex, months_regex, dow_regex, time_regex, year_regex, hostname_regex)
     rem = re.compile(regex)
     mo = rem.match(line)
     if (mo == None):
@@ -42,6 +42,13 @@ def parse_snapshot(line, show_ended_process_and_tlocks=False):
         regex = "^@ (?P<filesystem>\w+)\s+%s\s%s\s*%s\s%s\s%s\s\s%s" %(days_regex, months_regex, dow_regex, time_regex, year_regex, hostname_regex)
         rem = re.compile(regex)
         mo = rem.match(line)
+
+    #if (mo == None):
+        # A glocktop would not parse because of day of week string and not sure why, but this regex allow to continue. It parses filesystem was empty string that messed up results. 
+    #    regex = "^@ (?P<filesystem>[a-z0-9-_]*).*\s%s\s*%s\s%s\s%s\s\s%s" %(months_regex, dow_regex, time_regex, year_regex, hostname_regex)
+    #    rem = re.compile(regex)
+    #    mo = rem.match(line)
+
     if mo:
         date_time = datetime.strptime("%s %s %s %s" %(mo.group("month"), mo.group("dow"), mo.group("year"), mo.group("time")), "%b %d %Y %H:%M:%S")
         split_line = mo.group("hostname").strip().split("dlm:")
